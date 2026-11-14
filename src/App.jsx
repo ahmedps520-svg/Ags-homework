@@ -11,7 +11,7 @@
  * Nothing is persisted, no accounts exist and no notifications are sent.
  *
  * File map
- *   1. Brand tokens & global styles      8. App context & UI primitives
+ *   1. Brand tokens & global styles      8. App context & UI primitives (incl. Hero, CountUp)
  *   2. Translations (EN + AR)            9. Shell (top bar, demo guide, settings)
  *   3. Formatting, time & helpers       10. Student
  *   4. Static entities (classes, people) 11. Teacher
@@ -24,8 +24,12 @@ import React, {
   useState, useEffect, useMemo, useRef, useCallback, createContext, useContext,
 } from 'react';
 import {
-  AlarmClock, AlertCircle, AlertTriangle, AlignLeft, ArrowLeft, ArrowRight, Atom, BadgeCheck, BarChart3, Bell, BookMarked, BookOpen, Building2, CalendarClock, Camera, Check, CheckCheck, CheckCircle2, ChevronDown, Circle, CircleDot, ClipboardList, Clock, Dna, Eye, FileText, FlaskConical, Globe2, GraduationCap, Inbox, Info, LayoutDashboard, ListChecks, Loader2, Lock, MessageSquareText, Monitor, Palette, Paperclip, PenLine, PencilLine, Plus, PlusCircle, Presentation, RotateCcw, RotateCw, Send, Settings, Sigma, Sparkles, Star, Trash2, TrendingUp, Undo2, Upload, Users, X,
+  AlarmClock, AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, Atom, BadgeCheck, BarChart3, Bell, BookMarked, BookOpen, Building2, CalendarClock, Camera, Check, CheckCheck, CheckCircle2, ChevronDown, Circle, ClipboardList, Clock, Dna, Eye, FileText, FlaskConical, Globe2, GraduationCap, Inbox, Info, LayoutDashboard, ListChecks, Loader2, Lock, MessageSquareText, Monitor, Palette, PenLine, PencilLine, Plus, PlusCircle, Presentation, RotateCcw, RotateCw, Send, Settings, Sigma, Sparkles, Star, Trash2, TrendingUp, Undo2, Upload, Users, X,
 } from 'lucide-react';
+
+/** Official AGS logo: put the school's file in src/assets/ as ags-logo.svg / .png / .webp / .jpg and it is used automatically. */
+let AGS_LOGO = null;
+try { AGS_LOGO = Object.values(import.meta.glob('./assets/ags-logo.*', { eager: true, import: 'default' }))[0] || null; } catch (e) { AGS_LOGO = null; }
 
 /* ============================================================================
  * 1. BRAND TOKENS & GLOBAL STYLES
@@ -50,7 +54,7 @@ const GLOBAL_CSS = `
 .bg-ags-indigo{background-color:${BRAND.indigo}}.bg-ags-navy{background-color:${BRAND.navy}}.bg-ags-gold{background-color:${BRAND.gold}}
 .bg-ags-indigo-50{background-color:#EEEDF8}.bg-ags-indigo-100{background-color:#DFDDF2}.bg-ags-gold-50{background-color:#FEF8E1}.bg-ags-gold-100{background-color:#FCEFB8}
 .text-ags-indigo{color:${BRAND.indigo}}.text-ags-navy{color:${BRAND.navy}}.text-ags-gold{color:${BRAND.gold}}.text-ags-slate{color:${BRAND.slate}}
-.border-ags-gold{border-color:${BRAND.gold}}.border-ags-indigo{border-color:${BRAND.indigo}}
+.border-ags-gold{border-color:${BRAND.gold}}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font-weight:500;border-radius:.75rem;padding:.55rem 1rem;font-size:.9375rem;line-height:1.35rem;transition:background-color .15s,color .15s,box-shadow .15s,transform .1s;min-height:2.75rem;text-align:center}
 .btn:active:not(:disabled){transform:translateY(1px)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -58,7 +62,6 @@ const GLOBAL_CSS = `
 .btn-gold{background:${BRAND.gold};color:${BRAND.navy}}.btn-gold:hover:not(:disabled){background:${BRAND.goldHover}}
 .btn-secondary{background:#fff;color:${BRAND.indigo};box-shadow:inset 0 0 0 1px #CFCDE6}.btn-secondary:hover:not(:disabled){background:#F3F2FA}
 .btn-ghost{background:transparent;color:${BRAND.indigo}}.btn-ghost:hover:not(:disabled){background:#EEEDF8}
-.btn-danger{background:#fff;color:#9F1239;box-shadow:inset 0 0 0 1px #FBCFD8}.btn-danger:hover:not(:disabled){background:#FFF1F3}
 .btn-sm{min-height:2.25rem;padding:.35rem .75rem;font-size:.875rem;border-radius:.625rem}
 .btn-lg{min-height:3.25rem;padding:.8rem 1.5rem;font-size:1.0625rem}
 .btn-icon{min-height:2.5rem;min-width:2.5rem;padding:.4rem;border-radius:.625rem}
@@ -88,13 +91,23 @@ const GLOBAL_CSS = `
 .ags-flash{animation:ags-flash 1.6s ease-out 2}
 .ags-root[dir=rtl] .flip-rtl{transform:scaleX(-1)}
 .tabular{font-variant-numeric:tabular-nums}
-.hatch{background-image:repeating-linear-gradient(135deg,#CBD5E1 0 3px,#EEF1F6 3px 7px)}
 .reduce-motion *,.reduce-motion *::before,.reduce-motion *::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.001ms!important}
 @media (prefers-reduced-motion:reduce){.ags-root *,.ags-root *::before,.ags-root *::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
 .ags-root input[type=range]{accent-color:${BRAND.indigo}}
 .ags-root input[type=checkbox],.ags-root input[type=radio]{accent-color:${BRAND.indigo};width:1.15rem;height:1.15rem}
-.stage-early .stage-scale{font-size:1.08em}
 .touch-none{touch-action:none}
+@keyframes ags-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.ags-rise{animation:ags-rise .5s cubic-bezier(.2,.7,.2,1) both}
+@keyframes ags-ring{0%{transform:scale(.55);opacity:.6}100%{transform:scale(1.7);opacity:0}}
+.ags-ring{animation:ags-ring 1.2s .2s ease-out both}
+@keyframes ags-spark{0%{transform:translate(0,0) scale(.2);opacity:0}25%{opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(1);opacity:0}}
+.ags-spark{animation:ags-spark 1s ease-out both}
+.lift{transition:transform .2s ease,box-shadow .2s ease}
+.lift:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(32,31,60,.05),0 16px 32px -14px rgba(32,31,60,.24)}
+.lift:active{transform:translateY(0) scale(.995)}
+.hero{position:relative;overflow:hidden;border-radius:1.5rem;color:#fff;background:linear-gradient(135deg,${BRAND.indigo} 0%,#26245F 55%,${BRAND.navy} 100%);box-shadow:0 24px 48px -26px rgba(32,31,60,.7)}
+.hero-pattern{position:absolute;inset:0;opacity:.1;background-size:64px 64px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23F3C52D' stroke-width='1.1'%3E%3Crect x='18' y='18' width='28' height='28'/%3E%3Crect x='18' y='18' width='28' height='28' transform='rotate(45 32 32)'/%3E%3Ccircle cx='32' cy='32' r='6'/%3E%3Cpath d='M0 0l10 10M64 0L54 10M0 64l10-10M64 64L54 54'/%3E%3C/g%3E%3C/svg%3E")}
+.hero-glow{position:absolute;width:22rem;height:22rem;border-radius:9999px;background:radial-gradient(circle,rgba(243,197,45,.28),rgba(243,197,45,0) 70%);top:-9rem;inset-inline-end:-7rem;pointer-events:none}
 `;
 
 /* ============================================================================
@@ -183,10 +196,7 @@ const T = {
   'st.graded': ['Marked', 'تم التصحيح'],
   'st.returned': ['Returned with feedback', 'أُعيدت مع ملاحظات'],
   'st.revision': ['Needs a redo', 'مطلوب تعديله'],
-  'st.completed': ['Completed', 'مكتمل'],
   'st.scheduled': ['Scheduled', 'مجدول'],
-  'st.open': ['Open', 'مفتوح'],
-  'st.past': ['Closed', 'مغلق'],
 
   /* --- student home --- */
   'greet.morning': ['Good morning, {name}', 'صباح الخير، {name}'],
@@ -207,6 +217,7 @@ const T = {
   'home.feedback': ['Returned with feedback', 'أُعيدت مع ملاحظات'],
   'home.feedback.early': ['From my teacher', 'من معلّمي'],
   'home.noFeedback': ['No new feedback yet.', 'لا توجد ملاحظات جديدة بعد.'],
+  'home.startWith': ['Start with “{title}”', 'ابدأ بواجب «{title}»'],
   'home.showDone': ['Show finished work ({n})', 'عرض الواجبات المكتملة ({n})'],
   'home.hideDone': ['Hide finished work', 'إخفاء الواجبات المكتملة'],
   'reminder.text': ['{teacher} sent a reminder: “{title}” is waiting for you.', 'تذكير من {teacher}: واجب «{title}» بانتظارك.'],
@@ -290,6 +301,7 @@ const T = {
   'th.set': ['Set homework', 'إنشاء واجب'],
   'th.toMark': ['Ready to mark', 'جاهز للتصحيح'],
   'th.nToMark': ['{n} to mark', 'للتصحيح: {n}'],
+  'th.nOpen': [{ one: '1 homework open', other: '{n} homework open' }, 'الواجبات المفتوحة: {n}'],
   'th.startMarking': ['Start marking', 'ابدأ التصحيح'],
   'th.allMarked': ['All marked — nothing is waiting.', 'لا توجد أعمال بانتظار التصحيح.'],
   'th.yours': ['Homework you set', 'الواجبات التي أرسلتها'],
@@ -468,7 +480,6 @@ function mulberry32(seed) {
 }
 
 function startOfDay(ts) { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); }
-function isWeekend(ts) { const wd = new Date(ts).getDay(); return wd === 5 || wd === 6; } // Fri & Sat in KSA
 
 /** A timestamp `offset` days from today at hh:mm, nudged off the Fri/Sat weekend. */
 function atDay(offset, h = 19, m = 0, base = Date.now()) {
@@ -480,18 +491,7 @@ function atDay(offset, h = 19, m = 0, base = Date.now()) {
   return d.getTime();
 }
 
-/** Sunday that starts the current school week (on Fri/Sat, the coming week). */
-function schoolWeekStart(now, offsetWeeks = 0) {
-  const d = new Date(startOfDay(now)); const wd = d.getDay();
-  if (wd === 5) d.setDate(d.getDate() + 2);
-  else if (wd === 6) d.setDate(d.getDate() + 1);
-  else d.setDate(d.getDate() - wd);
-  d.setDate(d.getDate() + offsetWeeks * 7);
-  return d.getTime();
-}
-
 const toYMD = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const toHM = (ts) => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const fromYMDHM = (ymd, hm) => { const [y, mo, da] = ymd.split('-').map(Number); const [h, mi] = (hm || '00:00').split(':').map(Number); return new Date(y, mo - 1, da, h, mi, 0, 0).getTime(); };
 
 function makeI18n(lang) {
@@ -587,26 +587,24 @@ const SUBJECTS = {
 const CORE_SUBJECTS = ['math', 'english', 'science', 'arabic', 'islamic', 'social', 'ict', 'art'];
 
 const TEACHERS = {
-  sarah: { en: 'Ms. Sarah Hassan', ar: 'المعلّمة سارة حسن', shortEn: 'Ms. Sarah', shortAr: 'المعلّمة سارة', subject: 'math' },
-  emily: { en: 'Ms. Emily Clarke', ar: 'المعلّمة إميلي كلارك', subject: 'english' },
-  yusuf: { en: 'Mr. Yusuf Rahman', ar: 'المعلّم يوسف رحمن', subject: 'science' },
-  mona: { en: 'Ms. Mona Al-Otaibi', ar: 'المعلّمة منى العتيبي', subject: 'arabic' },
-  abdullah: { en: 'Mr. Abdullah Al-Shehri', ar: 'المعلّم عبدالله الشهري', subject: 'islamic' },
-  hassan: { en: 'Mr. Hassan Qureshi', ar: 'المعلّم حسن قريشي', subject: 'social' },
-  adel: { en: 'Mr. Adel Mansour', ar: 'المعلّم عادل منصور', subject: 'ict' },
-  lina: { en: 'Ms. Lina Haddad', ar: 'المعلّمة لينا حداد', subject: 'art' },
-  noura: { en: 'Ms. Noura Al-Zahrani', ar: 'المعلّمة نورة الزهراني', subject: 'math' },
-  hind: { en: 'Ms. Hind Al-Malki', ar: 'المعلّمة هند المالكي', subject: 'arabic' },
+  nabil: { en: 'Mr. Nabil Al-Omari', ar: 'الأستاذ نبيل العمري', shortEn: 'Mr. Nabil', shortAr: 'الأستاذ نبيل', greetAr: 'أستاذ نبيل', subject: 'math' },
+  daniel: { en: 'Mr. Daniel Brooks', ar: 'الأستاذ دانيال بروكس', subject: 'english' },
+  yusuf: { en: 'Mr. Yusuf Rahman', ar: 'الأستاذ يوسف رحمن', subject: 'science' },
+  saeed: { en: 'Mr. Saeed Al-Ghamdi', ar: 'الأستاذ سعيد الغامدي', subject: 'arabic' },
+  abdullah: { en: 'Mr. Abdullah Al-Shehri', ar: 'الأستاذ عبدالله الشهري', subject: 'islamic' },
+  hassan: { en: 'Mr. Hassan Qureshi', ar: 'الأستاذ حسن قريشي', subject: 'social' },
+  adel: { en: 'Mr. Adel Mansour', ar: 'الأستاذ عادل منصور', subject: 'ict' },
+  kareem: { en: 'Mr. Kareem Haddad', ar: 'الأستاذ كريم حداد', subject: 'art' },
+  noura: { en: 'Ms. Noura Al-Zahrani', ar: 'الأستاذة نورة الزهراني', subject: 'math' },
+  hind: { en: 'Ms. Hind Al-Malki', ar: 'الأستاذة هند المالكي', subject: 'arabic' },
   khalid: { en: 'Dr. Khalid Bakr', ar: 'الدكتور خالد بكر', subject: 'biology' },
-  ahmed: { en: 'Mr. Ahmed Fathy', ar: 'المعلّم أحمد فتحي', subject: 'math' },
-  rania: { en: 'Ms. Rania Aziz', ar: 'المعلّمة رانيا عزيز', subject: 'englit' },
-  tariq: { en: 'Mr. Tariq Saleh', ar: 'المعلّم طارق صالح', subject: 'chemistry' },
-  huda: { en: 'Ms. Huda Kamal', ar: 'المعلّمة هدى كمال', subject: 'physics' },
-  farouk: { en: 'Mr. Omar Farouk', ar: 'المعلّم عمر فاروق', subject: 'math' },
-  maha: { en: 'Ms. Maha Al-Sayed', ar: 'المعلّمة مها السيد', subject: 'english' },
+  ahmed: { en: 'Mr. Ahmed Fathy', ar: 'الأستاذ أحمد فتحي', subject: 'math' },
+  rami: { en: 'Mr. Rami Aziz', ar: 'الأستاذ رامي عزيز', subject: 'englit' },
+  tariq: { en: 'Mr. Tariq Saleh', ar: 'الأستاذ طارق صالح', subject: 'chemistry' },
+  hani: { en: 'Mr. Hani Kamal', ar: 'الأستاذ هاني كمال', subject: 'physics' },
 };
-const DEMO_TEACHER = 'sarah';
-const SARAH_CLASSES = ['8B1', '8B2', '8B3'];
+const DEMO_TEACHER = 'nabil';
+const DEMO_CLASSES = ['8B1', '8B2', '8B3'];
 
 const GRADE_AR = { 1: 'الأول', 6: 'السادس', 7: 'السابع', 8: 'الثامن', 9: 'التاسع', 10: 'العاشر', 11: 'الحادي عشر', 12: 'الثاني عشر' };
 const KG_AR = { 1: 'الأولى', 2: 'الثانية', 3: 'الثالثة' };
@@ -868,7 +866,6 @@ const pageSrc = (p) => p.src || sampleUri(p.sample, p.name);
 
 const AUTO_TYPES = ['mcq', 'checkbox', 'tf', 'match'];
 const isAuto = (b) => AUTO_TYPES.includes(b.type);
-const RUBRIC_PRESETS = ['method', 'accuracy', 'presentation', 'understanding', 'evidence', 'language', 'content', 'research', 'creativity'];
 
 /** Split `total` points across criteria (e.g. 10 → 4 / 3 / 3). */
 function distributeRubric(criteria, total) {
@@ -906,35 +903,35 @@ function buildSeed(now = Date.now()) {
   const A = {}; const S = {};
   const add = (o) => { const a = finalizeAssignment(o); A[a.id] = a; return a; };
 
-  /* --- Ms. Sarah's Mathematics (8A / 8B / 8C) --- */
+  /* --- Mr. Nabil's Mathematics (8B1 / 8B2 / 8B3, boys) --- */
   const ws = (name) => [{ id: uid('att'), kind: 'worksheet', name }];
-  add({ id: 'm1', title: 'Number Sense Warm-up', subject: 'math', teacherId: 'sarah', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-33, 19, 0, now), instructions: 'A quick check on rounding, powers and comparing numbers. Choose the best answer for each question.', blocks: [
+  add({ id: 'm1', title: 'Number Sense Warm-up', subject: 'math', teacherId: 'nabil', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-33, 19, 0, now), instructions: 'A quick check on rounding, powers and comparing numbers. Choose the best answer for each question.', blocks: [
     { type: 'mcq', prompt: 'Which number is irrational?', options: ['0.75', '√2', '3/8', '−4'], correct: 1, points: 2 },
     { type: 'mcq', prompt: 'Round 3.4762 to 2 decimal places.', options: ['3.47', '3.48', '3.5', '3.476'], correct: 1, points: 2 },
     { type: 'mcq', prompt: 'What is 2⁻³?', options: ['−8', '−6', '1/8', '1/6'], correct: 2, points: 2 },
     { type: 'mcq', prompt: 'Which is the largest?', options: ['0.6', '5/8', '62%', '0.059'], correct: 1, points: 2 },
     { type: 'tf', prompt: 'The square root of 81 is 9.', correct: true, points: 2 },
   ] });
-  add({ id: 'm2', title: 'Algebraic Expressions Review', subject: 'math', teacherId: 'sarah', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-26, 19, 0, now), sample: 'equations', instructions: 'Expand, factorise and simplify — Exercise 5A questions 1–15. Show every step.', attachments: ws('Exercise 5A — Expressions.pdf'), blocks: [PAPER_BLOCK(10)] });
-  add({ id: 'm3', title: 'Ratio & Proportion Quiz', subject: 'math', teacherId: 'sarah', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-19, 19, 0, now), instructions: 'Five questions on ratio and direct proportion. Marked automatically.', blocks: [
+  add({ id: 'm2', title: 'Algebraic Expressions Review', subject: 'math', teacherId: 'nabil', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-26, 19, 0, now), sample: 'equations', instructions: 'Expand, factorise and simplify — Exercise 5A questions 1–15. Show every step.', attachments: ws('Exercise 5A — Expressions.pdf'), blocks: [PAPER_BLOCK(10)] });
+  add({ id: 'm3', title: 'Ratio & Proportion Quiz', subject: 'math', teacherId: 'nabil', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-19, 19, 0, now), instructions: 'Five questions on ratio and direct proportion. Marked automatically.', blocks: [
     { type: 'mcq', prompt: 'Simplify the ratio 18 : 24.', options: ['3 : 4', '2 : 3', '9 : 12', '6 : 8'], correct: 0, points: 2 },
     { type: 'mcq', prompt: 'Share 45 sweets in the ratio 2 : 3. How many are in the larger share?', options: ['18', '27', '30', '15'], correct: 1, points: 2 },
     { type: 'mcq', prompt: '5 pens cost 12 SAR. How much do 8 pens cost?', options: ['19.20 SAR', '18.00 SAR', '20.40 SAR', '16.80 SAR'], correct: 0, points: 2 },
     { type: 'tf', prompt: 'If y is directly proportional to x, doubling x doubles y.', correct: true, points: 2 },
     { type: 'mcq', prompt: 'A map has a scale of 1 : 50 000. What does 4 cm on the map represent?', options: ['2 km', '20 km', '200 m', '0.2 km'], correct: 0, points: 2 },
   ] });
-  add({ id: 'm4', title: 'Percentages in Real Life', subject: 'math', teacherId: 'sarah', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-12, 19, 0, now), sample: 'textbook', instructions: 'Complete Exercise 4B on percentage increase and decrease. Photograph your answers.', attachments: ws('Exercise 4B — Percentages.pdf'), blocks: [PAPER_BLOCK(10)] });
-  add({ id: 'm5', title: 'Angles in Polygons', subject: 'math', teacherId: 'sarah', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-5, 19, 0, now), sample: 'textbook', instructions: 'Find interior and exterior angles of regular polygons — Exercise 8A, questions 1–10.', attachments: ws('Exercise 8A — Polygons.pdf'), blocks: [PAPER_BLOCK(10)] });
-  add({ id: 'm6', title: 'Linear Equations Practice', subject: 'math', teacherId: 'sarah', classes: ['8B1'], dueAt: atDay(1, 19, 0, now), publishAt: atDay(-3, 7, 30, now), sample: 'equations', instructions: 'Complete Exercise 6C questions 1–12 in your exercise book. Show each step of your working, then check each answer by substituting it back into the equation.', attachments: ws('Exercise 6C — Linear Equations.pdf'), blocks: [PAPER_BLOCK(10, 'Take a clear photo of each page of your working (questions 1–12).')] });
-  add({ id: 'm7', title: 'Linear Equations Practice', subject: 'math', teacherId: 'sarah', classes: ['8B2'], dueAt: atDay(2, 19, 0, now), publishAt: atDay(-2, 7, 30, now), sample: 'equations', instructions: 'Complete Exercise 6C questions 1–12 in your exercise book. Show each step of your working, then check each answer by substituting it back into the equation.', attachments: ws('Exercise 6C — Linear Equations.pdf'), blocks: [PAPER_BLOCK(10, 'Take a clear photo of each page of your working (questions 1–12).')] });
-  add({ id: 'm8', title: 'Angles & Parallel Lines Quiz', subject: 'math', teacherId: 'sarah', classes: ['8B3'], dueAt: atDay(5, 19, 0, now), publishAt: atDay(1, 7, 0, now), status: 'scheduled', instructions: 'Corresponding, alternate and co-interior angles. Marked automatically.', blocks: [
+  add({ id: 'm4', title: 'Percentages in Real Life', subject: 'math', teacherId: 'nabil', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-12, 19, 0, now), sample: 'textbook', instructions: 'Complete Exercise 4B on percentage increase and decrease. Photograph your answers.', attachments: ws('Exercise 4B — Percentages.pdf'), blocks: [PAPER_BLOCK(10)] });
+  add({ id: 'm5', title: 'Angles in Polygons', subject: 'math', teacherId: 'nabil', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-5, 19, 0, now), sample: 'textbook', instructions: 'Find interior and exterior angles of regular polygons — Exercise 8A, questions 1–10.', attachments: ws('Exercise 8A — Polygons.pdf'), blocks: [PAPER_BLOCK(10)] });
+  add({ id: 'm6', title: 'Linear Equations Practice', subject: 'math', teacherId: 'nabil', classes: ['8B1'], dueAt: atDay(1, 19, 0, now), publishAt: atDay(-3, 7, 30, now), sample: 'equations', instructions: 'Complete Exercise 6C questions 1–12 in your exercise book. Show each step of your working, then check each answer by substituting it back into the equation.', attachments: ws('Exercise 6C — Linear Equations.pdf'), blocks: [PAPER_BLOCK(10, 'Take a clear photo of each page of your working (questions 1–12).')] });
+  add({ id: 'm7', title: 'Linear Equations Practice', subject: 'math', teacherId: 'nabil', classes: ['8B2'], dueAt: atDay(2, 19, 0, now), publishAt: atDay(-2, 7, 30, now), sample: 'equations', instructions: 'Complete Exercise 6C questions 1–12 in your exercise book. Show each step of your working, then check each answer by substituting it back into the equation.', attachments: ws('Exercise 6C — Linear Equations.pdf'), blocks: [PAPER_BLOCK(10, 'Take a clear photo of each page of your working (questions 1–12).')] });
+  add({ id: 'm8', title: 'Angles & Parallel Lines Quiz', subject: 'math', teacherId: 'nabil', classes: ['8B3'], dueAt: atDay(5, 19, 0, now), publishAt: atDay(1, 7, 0, now), status: 'scheduled', instructions: 'Corresponding, alternate and co-interior angles. Marked automatically.', blocks: [
     { type: 'mcq', prompt: 'Alternate angles are…', options: ['equal', 'supplementary', 'complementary', 'always 90°'], correct: 0, points: 2 },
     { type: 'tf', prompt: 'Co-interior angles add up to 180°.', correct: true, points: 2 },
     { type: 'mcq', prompt: 'Two parallel lines are cut by a transversal. One angle is 65°. Its corresponding angle is…', options: ['25°', '65°', '115°', '130°'], correct: 1, points: 2 },
   ] });
 
   /* --- Omar's other subjects (Grade 8B, other teachers) --- */
-  add({ id: 'en1', title: 'Persuasive Paragraph: School Uniforms', subject: 'english', teacherId: 'emily', classes: ['8B1'], dueAt: atDay(3, 19, 0, now), instructions: 'Write one persuasive paragraph (150–200 words) arguing for or against school uniforms. Use the PEEL structure: Point, Evidence, Explain, Link.', rubric: ['content', 'evidence', 'language'], blocks: [
+  add({ id: 'en1', title: 'Persuasive Paragraph: School Uniforms', subject: 'english', teacherId: 'daniel', classes: ['8B1'], dueAt: atDay(3, 19, 0, now), instructions: 'Write one persuasive paragraph (150–200 words) arguing for or against school uniforms. Use the PEEL structure: Point, Evidence, Explain, Link.', rubric: ['content', 'evidence', 'language'], blocks: [
     { type: 'short', prompt: 'Write your topic sentence (your main point).', points: 2 },
     { type: 'long', prompt: 'Write your full persuasive paragraph.', points: 8 },
   ] });
@@ -946,7 +943,7 @@ function buildSeed(now = Date.now()) {
     { type: 'tf', prompt: 'Diffusion happens faster in gases than in liquids.', correct: true, points: 1 },
     { type: 'tf', prompt: 'Gases have a fixed volume.', correct: false, points: 1 },
   ] });
-  add({ id: 'ar1', title: 'قراءة وفهم: نص عن الأمانة', subject: 'arabic', teacherId: 'mona', classes: ['8B1'], lang: 'ar', dueAt: atDay(3, 19, 0, now), instructions: 'اقرأ النص المرفق «الأمانة خُلُق الكرام» قراءة متأنية، ثم أجب عن الأسئلة الآتية.', attachments: [{ id: 'att_ar1', kind: 'worksheet', name: 'نص: الأمانة خُلُق الكرام.pdf' }], rubric: ['understanding', 'language'], blocks: [
+  add({ id: 'ar1', title: 'قراءة وفهم: نص عن الأمانة', subject: 'arabic', teacherId: 'saeed', classes: ['8B1'], lang: 'ar', dueAt: atDay(3, 19, 0, now), instructions: 'اقرأ النص المرفق «الأمانة خُلُق الكرام» قراءة متأنية، ثم أجب عن الأسئلة الآتية.', attachments: [{ id: 'att_ar1', kind: 'worksheet', name: 'نص: الأمانة خُلُق الكرام.pdf' }], rubric: ['understanding', 'language'], blocks: [
     { type: 'mcq', prompt: 'ما الفكرة الرئيسة في النص؟', options: ['فضل الأمانة وأثرها في المجتمع', 'أهمية الرياضة للجسم', 'وصف رحلة إلى الصحراء', 'قصة عن الصداقة'], correct: 0, points: 2 },
     { type: 'short', prompt: 'ما معنى كلمة «الوفاء» كما وردت في النص؟', points: 2 },
     { type: 'tf', prompt: 'يرى الكاتب أن الأمانة تقتصر على حفظ المال.', correct: false, points: 1 },
@@ -965,7 +962,7 @@ function buildSeed(now = Date.now()) {
     { type: 'file', prompt: 'Upload your spreadsheet file.', points: 8 },
     { type: 'short', prompt: 'Which formula did you use to find the weekly total?', points: 2 },
   ] });
-  add({ id: 'art1', title: 'Islamic Geometric Pattern Sketch', subject: 'art', teacherId: 'lina', classes: ['8B1'], dueAt: atDay(-16, 19, 0, now), sample: 'pattern', instructions: 'Using a compass and ruler, construct an eight-point star pattern. Shade it using two colours.', rubric: ['method', 'creativity', 'presentation'], blocks: [PAPER_BLOCK(10, 'Photograph your finished sketch.')] });
+  add({ id: 'art1', title: 'Islamic Geometric Pattern Sketch', subject: 'art', teacherId: 'kareem', classes: ['8B1'], dueAt: atDay(-16, 19, 0, now), sample: 'pattern', instructions: 'Using a compass and ruler, construct an eight-point star pattern. Shade it using two colours.', rubric: ['method', 'creativity', 'presentation'], blocks: [PAPER_BLOCK(10, 'Photograph your finished sketch.')] });
 
   /* --- Layan (Grade 1A) --- */
   add({ id: 'e1', title: 'Count and colour 10 apples', subject: 'math', teacherId: 'noura', classes: ['KG2-A'], dueAt: atDay(1, 18, 0, now), instructions: 'Count 10 apples and colour them red. Then write the number 10 in the box.', attachments: [{ id: 'att_e1', kind: 'worksheet', name: 'Apples worksheet.pdf' }], rubric: ['understanding', 'presentation'], blocks: [PAPER_BLOCK(4, 'Take a photo of your coloured worksheet.')] });
@@ -989,7 +986,7 @@ function buildSeed(now = Date.now()) {
     { type: 'long', prompt: 'Evaluate one significant source of error and suggest an improvement.', points: 4 },
   ] });
   add({ id: 'f2', title: 'A-Level Maths: Differentiation', subject: 'math', teacherId: 'ahmed', classes: ['11B1'], dueAt: atDay(2, 23, 59, now), instructions: 'Exercise 7B: differentiate from first principles and using the power rule. Questions 1–15. Show full working.', attachments: [{ id: 'att_f2', kind: 'worksheet', name: 'Exercise 7B — Differentiation.pdf' }], blocks: [PAPER_BLOCK(15)] });
-  add({ id: 'f3', title: 'Macbeth Act 1: Ambition', subject: 'englit', teacherId: 'rania', classes: ['11B1'], dueAt: atDay(5, 23, 59, now), instructions: 'How does Shakespeare present ambition in Act 1? Refer closely to language and structure. 600–800 words.', rubric: ['understanding', 'evidence', 'language'], blocks: [{ type: 'long', prompt: 'Your essay', points: 20 }] });
+  add({ id: 'f3', title: 'Macbeth Act 1: Ambition', subject: 'englit', teacherId: 'rami', classes: ['11B1'], dueAt: atDay(5, 23, 59, now), instructions: 'How does Shakespeare present ambition in Act 1? Refer closely to language and structure. 600–800 words.', rubric: ['understanding', 'evidence', 'language'], blocks: [{ type: 'long', prompt: 'Your essay', points: 20 }] });
   add({ id: 'f4', title: 'Moles & Stoichiometry Quiz', subject: 'chemistry', teacherId: 'tariq', classes: ['11B1'], dueAt: atDay(-5, 23, 59, now), instructions: 'Five questions. Marked automatically.', blocks: [
     { type: 'mcq', prompt: 'How many moles are in 36 g of water (Mr = 18)?', options: ['2 mol', '0.5 mol', '18 mol', '36 mol'], correct: 0, points: 4 },
     { type: 'mcq', prompt: 'Avogadro’s constant is approximately…', options: ['6.02 × 10²³ mol⁻¹', '3.00 × 10⁸ mol⁻¹', '1.60 × 10⁻¹⁹ mol⁻¹', '9.81 mol⁻¹'], correct: 0, points: 4 },
@@ -997,15 +994,15 @@ function buildSeed(now = Date.now()) {
     { type: 'mcq', prompt: '2H₂ + O₂ → 2H₂O. How many moles of water form from 3 mol of H₂?', options: ['1.5', '3', '6', '2'], correct: 1, points: 4 },
     { type: 'tf', prompt: 'One mole of any gas occupies about 24 dm³ at room temperature and pressure.', correct: true, points: 4 },
   ] });
-  add({ id: 'f5', title: 'Kinematics Problem Set', subject: 'physics', teacherId: 'huda', classes: ['11B1'], dueAt: atDay(-1, 23, 59, now), latePolicy: { mode: 'accept', until: null, deduct: true, pct: 10 }, instructions: 'SUVAT problems 1–8. Show the equation you choose and your substitution.', blocks: [PAPER_BLOCK(16)] });
-  add({ id: 'f6', title: 'مقال: أثر التقنية في حياتنا', subject: 'arabic', teacherId: 'mona', classes: ['11B1'], lang: 'ar', dueAt: atDay(-14, 23, 59, now), instructions: 'اكتب مقالًا من ثلاث فقرات عن أثر التقنية في حياة الشباب، مع مقدمة وخاتمة.', rubric: ['content', 'language'], blocks: [{ type: 'long', prompt: 'المقال', points: 15 }] });
+  add({ id: 'f5', title: 'Kinematics Problem Set', subject: 'physics', teacherId: 'hani', classes: ['11B1'], dueAt: atDay(-1, 23, 59, now), latePolicy: { mode: 'accept', until: null, deduct: true, pct: 10 }, instructions: 'SUVAT problems 1–8. Show the equation you choose and your substitution.', blocks: [PAPER_BLOCK(16)] });
+  add({ id: 'f6', title: 'مقال: أثر التقنية في حياتنا', subject: 'arabic', teacherId: 'saeed', classes: ['11B1'], lang: 'ar', dueAt: atDay(-14, 23, 59, now), instructions: 'اكتب مقالًا من ثلاث فقرات عن أثر التقنية في حياة الشباب، مع مقدمة وخاتمة.', rubric: ['content', 'language'], blocks: [{ type: 'long', prompt: 'المقال', points: 15 }] });
 
   /* --- submissions --- */
   const put = (aid, sid, o) => { S[subKey(aid, sid)] = { id: uid('sub'), assignmentId: aid, studentId: sid, answers: {}, annotations: {}, rubricScores: {}, comment: '', note: '', history: [], ...o }; };
 
-  // Sarah's classes — generated.
-  const sarahIds = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7'];
-  sarahIds.forEach((aid) => {
+  // Mr. Nabil's classes — generated.
+  const mathIds = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7'];
+  mathIds.forEach((aid) => {
     const a = A[aid];
     a.classes.forEach((cls) => {
       const roster = ROSTERS[cls];
@@ -1123,7 +1120,6 @@ function autoScore(a, answers = {}) {
   const auto = a.blocks.filter(isAuto);
   return { score: round1(sum(auto.map((b) => scoreBlock(b, answers[b.id])))), max: sum(auto.map((b) => b.points)), count: auto.length };
 }
-const teacherPoints = (a) => sum(a.blocks.filter((b) => !isAuto(b)).map((b) => b.points));
 
 function isAnswered(b, v) {
   if (v == null) return false;
@@ -1133,15 +1129,6 @@ function isAnswered(b, v) {
   return true;
 }
 
-function submissionType(a) {
-  const types = new Set(a.blocks.map((b) => b.type));
-  if (types.size === 1 && types.has('paper')) return 'paper';
-  if ([...types].every((x) => AUTO_TYPES.includes(x))) return 'quiz';
-  if (types.has('paper')) return 'paper';
-  if (types.has('file')) return 'file';
-  return 'online';
-}
-const TYPE_ICON = { paper: Camera, quiz: ListChecks, file: Paperclip, online: AlignLeft };
 
 function canSubmit(a, now, sub) {
   if (sub && sub.resubmitting) return true;
@@ -1208,6 +1195,7 @@ const useApp = () => useContext(AppCtx);
 
 const subjName = (code, lang) => (SUBJECTS[code] ? SUBJECTS[code][lang === 'ar' ? 'ar' : 'en'] : code);
 const teacherName = (id, lang) => (TEACHERS[id] ? TEACHERS[id][lang === 'ar' ? 'ar' : 'en'] : id);
+const teacherGreet = (id, lang) => { const x = TEACHERS[id]; return x ? (lang === 'ar' ? (x.greetAr || x.shortAr || x.ar) : (x.shortEn || x.en)) : id; };
 const teacherShort = (id, lang) => { const x = TEACHERS[id]; if (!x) return id; return lang === 'ar' ? (x.shortAr || x.ar) : (x.shortEn || x.en); };
 const studentName = (s, lang) => (s ? (lang === 'ar' ? s.ar : s.en) : '');
 const studentFirst = (s, lang) => (s ? (lang === 'ar' ? s.firstAr : s.firstEn) : '');
@@ -1239,10 +1227,7 @@ const STATUS = {
   graded: { tone: 'green', icon: BadgeCheck },
   returned: { tone: 'green', icon: CheckCircle2 },
   revision: { tone: 'green', icon: RotateCcw },
-  completed: { tone: 'green', icon: CheckCheck },
   scheduled: { tone: 'blue', icon: CalendarClock },
-  open: { tone: 'indigo', icon: CircleDot },
-  past: { tone: 'grey', icon: Lock },
 };
 const TONE = {
   grey: 'bg-slate-100 text-slate-700 ring-slate-300',
@@ -1314,15 +1299,17 @@ function Avatar({ name, size = 'md', tone = 'indigo' }) {
 
 function ProgressBar({ value, max = 1, tone = 'indigo', label, className, height = 'h-2' }) {
   const pct = max ? clamp(value / max, 0, 1) : 0;
+  const [shown, setShown] = useState(0);
+  useEffect(() => { const id = requestAnimationFrame(() => setShown(pct)); return () => cancelAnimationFrame(id); }, [pct]);
   const fills = { indigo: 'bg-ags-indigo', gold: 'bg-ags-gold', green: 'bg-emerald-600', amber: 'bg-amber-500' };
   return (
     <div role="progressbar" aria-valuemin={0} aria-valuemax={max} aria-valuenow={value} aria-label={label} className={cx('w-full rounded-full bg-slate-200/80 overflow-hidden', height, className)}>
-      <div className={cx('h-full rounded-full transition-all duration-500', fills[tone])} style={{ width: `${pct * 100}%` }} />
+      <div className={cx('h-full rounded-full transition-[width] duration-700 ease-out', fills[tone])} style={{ width: `${shown * 100}%` }} />
     </div>
   );
 }
 
-function Segmented({ options, value, onChange, ariaLabel, dark = false, size = 'md', full = false, className }) {
+function Segmented({ options, value, onChange, ariaLabel, dark = false, muted = false, size = 'md', full = false, className }) {
   const { dir } = useApp();
   const refs = useRef([]);
   const onKey = (e) => {
@@ -1339,7 +1326,7 @@ function Segmented({ options, value, onChange, ariaLabel, dark = false, size = '
   };
   return (
     <div role="radiogroup" aria-label={ariaLabel} onKeyDown={onKey}
-      className={cx('inline-flex items-stretch rounded-xl p-1 gap-1', dark ? 'bg-ags-navy/70 ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200', full && 'w-full', className)}>
+      className={cx('inline-flex items-stretch rounded-xl p-1 gap-1', dark ? 'bg-white/10 ring-1 ring-white/15' : muted ? 'bg-slate-100 ring-1 ring-slate-200/70' : 'bg-white ring-1 ring-slate-200', full && 'w-full', className)}>
       {options.map((o, i) => {
         const active = o.value === value; const I = o.icon;
         return (
@@ -1481,30 +1468,65 @@ function Toasts({ toasts, dismiss }) {
   );
 }
 
-/** Animated check used on successful submission (gentle, no confetti). */
-function SuccessCheck({ early = false }) {
-  if (early) {
-    return (
-      <div className="relative w-28 h-28 mx-auto" aria-hidden="true">
-        <svg viewBox="0 0 100 100" className="w-28 h-28 ags-star">
-          <polygon points="50,6 61,38 95,38 67,58 78,92 50,72 22,92 33,58 5,38 39,38" fill={BRAND.gold} stroke={BRAND.goldHover} strokeWidth="2" strokeLinejoin="round" />
-          <path d="M34 52 l11 11 l22 -24" fill="none" stroke={BRAND.navy} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" className="ags-draw-check" />
-        </svg>
-        {[[-6, 20], [96, 14], [90, 86], [2, 80]].map(([x, y], i) => (
-          <svg key={i} viewBox="0 0 10 10" className="absolute w-4 h-4 ags-star" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${0.3 + i * 0.12}s` }}><polygon points="5,0 6.2,3.8 10,3.8 7,6.1 8.1,10 5,7.6 1.9,10 3,6.1 0,3.8 3.8,3.8" fill={BRAND.gold} /></svg>
-        ))}
-      </div>
-    );
-  }
+/** Numbers that count up gently when they first appear (instant with reduced motion). */
+function CountUp({ value, format = (v) => v }) {
+  const { settings } = useApp();
+  const still = settings.reduceMotion || (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [v, setV] = useState(still ? value : 0);
+  useEffect(() => {
+    if (still) { setV(value); return undefined; }
+    let raf; const t0 = performance.now();
+    const step = (tm) => { const p = Math.min(1, (tm - t0) / 700); setV(value * (1 - (1 - p) ** 3)); if (p < 1) raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value, still]);
+  return <span className="tabular">{format(v)}</span>;
+}
+
+/** A horizontal bar that grows from zero. */
+function Bar({ value, open = false }) {
+  const [w, setW] = useState(0);
+  useEffect(() => { const id = requestAnimationFrame(() => setW(clamp(value, 0, 1))); return () => cancelAnimationFrame(id); }, [value]);
+  return <span className={cx('block h-full rounded-e transition-[width] duration-700 ease-out', open ? 'bg-ags-indigo/60' : 'bg-ags-indigo')} style={{ width: `${w * 100}%` }} />;
+}
+
+/** Brand banner used at the top of each home screen. */
+function Hero({ children, className }) {
   return (
-    <svg viewBox="0 0 56 56" className="w-20 h-20 mx-auto" aria-hidden="true">
-      <circle cx="28" cy="28" r="26" fill="#ECFDF5" />
-      <circle cx="28" cy="28" r="26" fill="none" stroke="#059669" strokeWidth="3" className="ags-draw-circle" />
-      <path d="M16 29 l8 8 l16 -17" fill="none" stroke="#059669" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="ags-draw-check" />
-    </svg>
+    <section className={cx('hero on-dark p-6 sm:p-8 mb-8', className)}>
+      <div aria-hidden="true" className="hero-pattern" />
+      <div aria-hidden="true" className="hero-glow" />
+      <div className="relative">{children}</div>
+    </section>
   );
 }
 
+/** Calm celebration on hand-in: a drawn check, one soft ring and a few sparkles. */
+function SuccessCheck({ early = false }) {
+  const sparks = [[-64, -44], [66, -48], [-82, 14], [84, 18], [-38, 62], [42, 64]];
+  return (
+    <div className="relative w-28 h-28 mx-auto" aria-hidden="true">
+      <span className={cx('absolute inset-2 rounded-full ags-ring', early ? 'bg-amber-300/50' : 'bg-emerald-300/50')} />
+      {sparks.map(([dx, dy], i) => (
+        <span key={i} className="ags-spark absolute left-1/2 top-1/2 -ml-1.5 -mt-1.5 w-3 h-3" style={{ '--dx': `${dx}px`, '--dy': `${dy}px`, animationDelay: `${0.35 + i * 0.05}s` }}>
+          <svg viewBox="0 0 10 10" className="w-3 h-3"><polygon points="5,0 6.2,3.8 10,3.8 7,6.1 8.1,10 5,7.6 1.9,10 3,6.1 0,3.8 3.8,3.8" fill={BRAND.gold} /></svg>
+        </span>
+      ))}
+      {early ? (
+        <svg viewBox="0 0 100 100" className="relative w-28 h-28 ags-star">
+          <polygon points="50,6 61,38 95,38 67,58 78,92 50,72 22,92 33,58 5,38 39,38" fill={BRAND.gold} stroke={BRAND.goldHover} strokeWidth="2" strokeLinejoin="round" />
+          <path d="M34 52 l11 11 l22 -24" fill="none" stroke={BRAND.navy} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" className="ags-draw-check" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 56 56" className="relative w-28 h-28">
+          <circle cx="28" cy="28" r="24" fill="#ECFDF5" />
+          <circle cx="28" cy="28" r="24" fill="none" stroke="#059669" strokeWidth="3" className="ags-draw-circle" />
+          <path d="M17 29 l7.5 7.5 l15 -16" fill="none" stroke="#059669" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="ags-draw-check" />
+        </svg>
+      )}
+    </div>
+  );
+}
 
 /* ---------- shared: document preview, annotation canvas, image helpers ---------- */
 
@@ -1635,18 +1657,26 @@ async function rotateImage(src) {
   return c.toDataURL('image/jpeg', 0.9);
 }
 
-const settingsReduce = () => typeof document !== 'undefined' && document.querySelector('.ags-root.reduce-motion') != null;
 
 /* ============================================================================
  * 9. SHELL — one top bar, no sidebar. Teachers get three simple tabs.
  * ========================================================================== */
 
-function Wordmark() {
+function Logo() {
   const { t } = useApp();
+  if (AGS_LOGO) {
+    return (
+      <div className="flex items-center gap-3 min-w-0">
+        <img src={AGS_LOGO} alt={t('app.school')} className="h-10 sm:h-12 w-auto object-contain shrink-0" />
+        <span aria-hidden="true" className="hidden sm:block w-px h-8 bg-slate-200" />
+        <span className="hidden sm:block font-bold text-ags-navy text-[1.05rem] whitespace-nowrap">{t('app.name')}</span>
+      </div>
+    );
+  }
   return (
-    <div className="flex items-center gap-2.5 shrink-0">
-      <span className="bg-ags-navy text-ags-gold font-bold tracking-widest rounded-lg px-2.5 py-1 text-lg leading-none ring-1 ring-white/10" dir="ltr">AGS</span>
-      <span className="font-medium text-white text-[1.05rem] leading-tight hidden min-[380px]:inline">{t('app.name')}</span>
+    <div className="leading-tight min-w-0">
+      <span className="block font-bold text-ags-navy text-[1.1rem]">{t('app.name')}</span>
+      <span className="block text-[0.72rem] text-ags-slate truncate max-w-[13rem] sm:max-w-none">{t('app.school')}</span>
     </div>
   );
 }
@@ -1654,10 +1684,10 @@ function Wordmark() {
 function LangToggle() {
   const { lang, setLang, t } = useApp();
   return (
-    <div role="group" aria-label={t('lang.label')} className="inline-flex rounded-lg bg-ags-navy/70 ring-1 ring-white/10 p-0.5">
+    <div role="group" aria-label={t('lang.label')} className="inline-flex rounded-xl bg-slate-100 ring-1 ring-slate-200/70 p-1">
       {[['en', 'EN', 'English'], ['ar', 'ع', 'العربية']].map(([code, short, full]) => (
         <button key={code} type="button" lang={code} aria-pressed={lang === code} aria-label={full} onClick={() => setLang(code)}
-          className={cx('min-w-[2.4rem] min-h-[2.2rem] px-2 rounded-md text-sm font-bold transition-colors', lang === code ? 'bg-ags-gold text-ags-navy' : 'text-white/85 hover:bg-white/10')}>{short}</button>
+          className={cx('min-w-[2.4rem] min-h-[2.1rem] px-2 rounded-lg text-sm font-bold transition-all', lang === code ? 'bg-white text-ags-indigo shadow-sm ring-1 ring-slate-200' : 'text-ags-slate hover:text-ags-navy')}>{short}</button>
       ))}
     </div>
   );
@@ -1666,7 +1696,7 @@ function LangToggle() {
 function RoleSwitch({ full }) {
   const { role, setRole, t } = useApp();
   return (
-    <Segmented dark full={full} ariaLabel={t('role.label')} value={role} onChange={setRole}
+    <Segmented muted full={full} ariaLabel={t('role.label')} value={role} onChange={setRole}
       options={[{ value: 'student', label: t('role.student'), icon: GraduationCap }, { value: 'teacher', label: t('role.teacher'), icon: Presentation }, { value: 'admin', label: t('role.admin'), icon: Building2 }]} />
   );
 }
@@ -1674,16 +1704,17 @@ function RoleSwitch({ full }) {
 function TopBar({ onSettings }) {
   const { t } = useApp();
   return (
-    <header className="on-dark sticky top-0 z-50 bg-ags-indigo text-white shadow-[0_2px_12px_rgba(32,31,60,.25)]">
-      <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 h-16">
-        <Wordmark />
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200/70 shadow-[0_10px_30px_-24px_rgba(32,31,60,.45)]">
+      <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 h-[4.25rem]">
+        <Logo />
         <div className="hidden md:flex flex-1 justify-center"><RoleSwitch /></div>
-        <div className="ms-auto md:ms-0 flex items-center gap-2">
+        <div className="ms-auto md:ms-0 flex items-center gap-1.5">
           <LangToggle />
-          <button type="button" onClick={onSettings} className="btn btn-icon text-white/90 hover:bg-white/10" aria-label={t('settings')}><Settings aria-hidden="true" className="w-5 h-5" /></button>
+          <button type="button" onClick={onSettings} className="btn btn-ghost btn-icon" aria-label={t('settings')}><Settings aria-hidden="true" className="w-5 h-5" /></button>
         </div>
       </div>
       <div className="md:hidden px-4 pb-3"><RoleSwitch full /></div>
+      <div aria-hidden="true" className="h-[3px] bg-gradient-to-r from-ags-indigo via-ags-gold to-ags-indigo" />
     </header>
   );
 }
@@ -1787,7 +1818,7 @@ function Footer({ onAbout }) {
   const { t } = useApp();
   return (
     <footer className="mt-14 pt-5 border-t border-slate-200 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-ags-slate">
-      <span className="font-bold text-ags-indigo" dir="ltr">AGS</span><span>{t('app.name')}</span><span aria-hidden="true">·</span>
+      <span>{t('app.school')}</span><span aria-hidden="true">·</span><span className="font-medium text-ags-indigo">{t('app.name')}</span><span aria-hidden="true">·</span>
       <button type="button" onClick={onAbout} className="inline-flex items-center gap-1.5 rounded-full bg-ags-gold-50 ring-1 ring-amber-200 px-2.5 py-1 text-ags-navy hover:bg-ags-gold-100">
         <Info aria-hidden="true" className="w-3.5 h-3.5" />{t('demo.footer')}
       </button>
@@ -1796,10 +1827,11 @@ function Footer({ onAbout }) {
 }
 
 function H2({ icon: I, children, count, tone }) {
+  const { fmt } = useApp();
   return (
     <h2 className="text-lg font-bold text-ags-navy flex items-center gap-2.5 mb-3">
       {I && <I aria-hidden="true" className={cx('w-5 h-5', tone || 'text-ags-indigo')} />}{children}
-      {count != null && <span className="text-xs font-bold tabular bg-ags-indigo-50 text-ags-indigo rounded-full px-2 py-0.5">{count}</span>}
+      {count != null && <span className="text-xs font-bold tabular bg-ags-indigo-50 text-ags-indigo rounded-full px-2 py-0.5">{fmt.n(count)}</span>}
     </h2>
   );
 }
@@ -1840,7 +1872,7 @@ function HomeworkCard({ item }) {
   const big = stage === 'early'; const compact = stage === 'senior';
   return (
     <button type="button" onClick={() => navigate({ name: 'assignment', id: a.id })}
-      className={cx('card group w-full text-start flex items-center gap-4 hover:shadow-lg transition-shadow relative overflow-hidden', big ? 'p-5 min-h-[7rem]' : compact ? 'px-4 py-3' : 'p-4', late && 'ring-1 ring-amber-300')}>
+      className={cx('card lift group w-full text-start flex items-center gap-4 relative overflow-hidden', big ? 'p-5 min-h-[7rem]' : compact ? 'px-4 py-3' : 'p-4', late && 'ring-1 ring-amber-300')}>
       <span aria-hidden="true" className="absolute inset-y-0 start-0 w-1.5" style={{ background: subj.color }} />
       {big ? <SubjectArt code={a.subject} /> : !compact && <SubjectBadge code={a.subject} />}
       <span className="flex-1 min-w-0">
@@ -1872,18 +1904,26 @@ function StudentHome() {
   const feedback = items.filter((x) => x.st === 'revision' || (x.st === 'returned' && now - (x.sub.returnedAt || 0) < 7 * DAY)).sort((p, q) => (q.sub.returnedAt || 0) - (p.sub.returnedAt || 0));
   const done = items.filter((x) => ['submitted', 'submittedLate'].includes(x.st) || (x.st === 'returned' && !feedback.includes(x))).sort((p, q) => (q.sub.submittedAt || 0) - (p.sub.submittedAt || 0));
   const todoCount = upcoming.length + late.filter((x) => x.st === 'overdue').length;
+  const next = upcoming[0] || late.find((x) => x.st === 'overdue');
   const hour = new Date(now).getHours();
   const greet = stage === 'early' ? t('greet.early', { name: studentFirst(student, lang) }) : t(hour < 12 ? 'greet.morning' : hour < 17 ? 'greet.afternoon' : 'greet.evening', { name: studentFirst(student, lang) });
   const summary = todoCount ? t.s('home.summary', stage, { n: todoCount }) : t.s('home.allDone', stage);
   const reminders = db.reminders.filter((r) => r.studentId === student.id && !r.dismissed);
-  const List = ({ xs }) => <div className={cx('grid gap-3', stage === 'early' && 'gap-4')}>{xs.map((x) => <HomeworkCard key={x.a.id} item={x} />)}</div>;
+  const List = ({ xs }) => <div className={cx('grid gap-3', stage === 'early' && 'gap-4')}>{xs.map((x, i) => <div key={x.a.id} className="ags-rise" style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}><HomeworkCard item={x} /></div>)}</div>;
   return (
     <div className={cx('max-w-3xl mx-auto', stage === 'early' && 'stage-early')}>
-      <p className="text-sm text-ags-slate">{fmt.dateLong(now)} <span aria-hidden="true">·</span> <span className="text-xs">{fmt.hijri(now)}</span></p>
-      <h1 className={cx('font-bold text-ags-navy mt-1 leading-tight', stage === 'early' ? 'text-4xl' : 'text-3xl')}>{greet}</h1>
-      <p className={cx('mt-2 text-ags-navy flex items-center gap-2', stage === 'early' ? 'text-xl' : 'text-lg')}>
-        {todoCount ? <ListChecks aria-hidden="true" className="w-5 h-5 text-ags-indigo shrink-0" /> : <Star aria-hidden="true" className="w-5 h-5 text-ags-gold fill-current shrink-0" />}{summary}
-      </p>
+      <Hero>
+        <p className="text-sm text-white/75">{fmt.dateLong(now)} <span aria-hidden="true">·</span> {fmt.hijri(now)}</p>
+        <h1 className={cx('font-bold mt-1 leading-tight', stage === 'early' ? 'text-4xl' : 'text-3xl sm:text-[2.15rem]')}>{greet}</h1>
+        <p className={cx('mt-3 text-white/90 flex items-center gap-2', stage === 'early' ? 'text-xl' : 'text-lg')}>
+          {todoCount ? <ListChecks aria-hidden="true" className="w-5 h-5 text-ags-gold shrink-0" /> : <Star aria-hidden="true" className="w-5 h-5 text-ags-gold fill-current shrink-0" />}{summary}
+        </p>
+        {next && (
+          <button type="button" onClick={() => navigate({ name: 'assignment', id: next.a.id })} className={cx('btn btn-gold mt-5 shadow-lg', stage === 'early' && 'btn-lg')}>
+            {t('home.startWith', { title: next.a.title })}<ArrowRight aria-hidden="true" className="w-4 h-4 flip-rtl" />
+          </button>
+        )}
+      </Hero>
 
       {reminders.map((r) => (
         <div key={r.id} className="card p-4 mt-5 flex flex-wrap items-center gap-3 border-s-4 border-ags-gold">
@@ -1894,7 +1934,7 @@ function StudentHome() {
         </div>
       ))}
 
-      <section className="mt-8" aria-labelledby="todo-h">
+      <section aria-labelledby="todo-h">
         <h2 id="todo-h" className="sr-only">{t('home.todo')}</h2>
         <H2 icon={ListChecks} count={upcoming.length}>{t.s('home.todo', stage)}</H2>
         {upcoming.length ? <List xs={upcoming} /> : <div className="card"><EmptyState icon={CheckCircle2} title={t.s('home.nothing', stage)} /></div>}
@@ -1996,7 +2036,7 @@ function PhotoPages({ pages, onChange, editable, preview }) {
       {pages.length > 0 && (
         <ol className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3" aria-label={t('photo.count', { n: pages.length })}>
           {pages.map((p, i) => (
-            <li key={p.id} className="relative">
+            <li key={p.id} className="relative ags-pop">
               <img src={pageSrc(p)} alt={t('photo.page', { n: i + 1 })} className="w-full aspect-[3/4] object-cover rounded-xl ring-1 ring-slate-200 bg-white" />
               <span className="absolute top-2 start-2 text-xs font-bold bg-ags-navy text-white rounded-md px-2 py-0.5">{t('photo.page', { n: i + 1 })}</span>
               {editable && (
@@ -2178,7 +2218,7 @@ function AssignmentPage({ id }) {
     const early = stage === 'early';
     return (
       <div className="max-w-xl mx-auto text-center card p-8 sm:p-10 ags-fade-up">
-        {settingsReduce() ? <CheckCircle2 aria-hidden="true" className="w-20 h-20 mx-auto text-emerald-600" /> : <SuccessCheck early={early} />}
+        <SuccessCheck early={early} />
         <h1 role="status" className={cx('font-bold text-ags-navy mt-5', early ? 'text-3xl' : 'text-2xl')}>{early ? t('done.early') : done.late ? t('done.late', { n: done.daysLate }) : t('done.onTime')}</h1>
         <p className="text-ags-slate mt-2">{t('done.next', { teacher: teacherShort(a.teacherId, lang) })}</p>
         <button type="button" className="btn btn-primary btn-lg mt-7" onClick={() => navigate({ name: 'home' })}><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('back.home')}</button>
@@ -2261,27 +2301,36 @@ function TeacherHome() {
   const toMark = rows.filter((r) => r.s.toGrade > 0).sort((x, y) => y.s.toGrade - x.s.toGrade);
   const recent = rows.filter((r) => r.a.dueAt > now - 10 * DAY).sort((x, y) => (x.a.dueAt > now) === (y.a.dueAt > now) ? x.a.dueAt - y.a.dueAt : x.a.dueAt > now ? -1 : 1);
   const scheduled = mine.filter((a) => !isPublished(a, now));
-  const help = SARAH_CLASSES.reduce((n, c) => n + supportList(db, c, now).length, 0);
+  const help = DEMO_CLASSES.reduce((n, c) => n + supportList(db, c, now).length, 0);
+  const markTotal = sum(toMark.map((r) => r.s.toGrade));
+  const openCount = mine.filter((a) => isPublished(a, now) && a.dueAt > now).length;
   const hour = new Date(now).getHours();
   const startMarking = (r) => { const s = firstToMark(db, r.a, r.cls, now); if (s) navigate({ name: 'mark', id: r.a.id, sid: s.id }); };
   return (
     <div className="max-w-4xl mx-auto">
       <TeacherTabs />
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-7">
-        <div>
-          <h1 className="text-3xl font-bold text-ags-navy">{t(hour < 12 ? 'greet.morning' : hour < 17 ? 'greet.afternoon' : 'greet.evening', { name: teacherShort('sarah', lang) })}</h1>
-          <p className="text-ags-slate mt-1">{subjName('math', lang)} · <bdi>{clsList(SARAH_CLASSES, lang)}</bdi></p>
+      <Hero>
+        <div className="flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <p className="text-sm text-white/75">{fmt.dateLong(now)} <span aria-hidden="true">·</span> {fmt.hijri(now)}</p>
+            <h1 className="text-3xl sm:text-[2.15rem] font-bold mt-1">{t(hour < 12 ? 'greet.morning' : hour < 17 ? 'greet.afternoon' : 'greet.evening', { name: teacherGreet(DEMO_TEACHER, lang) })}</h1>
+            <p className="text-white/80 mt-1">{subjName('math', lang)} · <bdi>{clsList(DEMO_CLASSES, lang)}</bdi></p>
+            <div className="mt-4 flex flex-wrap gap-2 text-sm">
+              <span className="rounded-full bg-white/10 ring-1 ring-white/15 px-3 py-1 inline-flex items-center gap-1.5"><Inbox aria-hidden="true" className="w-4 h-4 text-ags-gold" />{t('th.nToMark', { n: markTotal })}</span>
+              <span className="rounded-full bg-white/10 ring-1 ring-white/15 px-3 py-1 inline-flex items-center gap-1.5"><ClipboardList aria-hidden="true" className="w-4 h-4 text-ags-gold" />{t('th.nOpen', { n: openCount })}</span>
+            </div>
+          </div>
+          <button type="button" className="btn btn-gold btn-lg shadow-lg" onClick={() => navigate({ name: 'create' })}><Plus aria-hidden="true" className="w-5 h-5" />{t('th.set')}</button>
         </div>
-        <button type="button" className="btn btn-gold btn-lg" onClick={() => navigate({ name: 'create' })}><Plus aria-hidden="true" className="w-5 h-5" />{t('th.set')}</button>
-      </div>
+      </Hero>
 
       <section className="card p-5 sm:p-6 mb-5" aria-labelledby="tm-h">
         <h2 id="tm-h" className="sr-only">{t('th.toMark')}</h2>
         <H2 icon={Inbox} count={sum(toMark.map((r) => r.s.toGrade))}>{t('th.toMark')}</H2>
         {toMark.length ? (
           <ul className="divide-y divide-slate-100">
-            {toMark.map((r) => (
-              <li key={r.a.id + r.cls} className="py-3 flex flex-wrap items-center gap-3">
+            {toMark.map((r, i) => (
+              <li key={r.a.id + r.cls} className="py-3 flex flex-wrap items-center gap-3 ags-rise" style={{ animationDelay: `${i * 60}ms` }}>
                 <span className="flex-1 min-w-[12rem]">
                   <span className="block font-bold text-ags-navy"><bdi>{r.a.title}</bdi></span>
                   <span className="block text-sm text-ags-slate"><bdi>{clsLabel(r.cls, lang)}</bdi> · {t('th.handedIn', { n: r.s.handedIn, total: r.s.total })}</span>
@@ -2298,10 +2347,10 @@ function TeacherHome() {
         <h2 id="yh-h" className="sr-only">{t('th.yours')}</h2>
         <H2 icon={ClipboardList}>{t('th.yours')}</H2>
         <ul className="divide-y divide-slate-100">
-          {recent.map((r) => {
+          {recent.map((r, i) => {
             const notIn = r.s.missing + r.s.notYet;
             return (
-              <li key={r.a.id + r.cls} className="py-3.5">
+              <li key={r.a.id + r.cls} className="py-3.5 ags-rise" style={{ animationDelay: `${i * 60}ms` }}>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   <span className="flex-1 min-w-[12rem]">
                     <span className="block font-bold text-ags-navy"><bdi>{r.a.title}</bdi></span>
@@ -2327,7 +2376,7 @@ function TeacherHome() {
       </section>
 
       {help > 0 && (
-        <button type="button" onClick={() => navigate({ name: 'progress' })} className="card w-full text-start p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
+        <button type="button" onClick={() => navigate({ name: 'progress' })} className="card lift w-full text-start p-5 flex items-center gap-4">
           <span className="w-11 h-11 rounded-xl bg-amber-50 text-amber-700 inline-flex items-center justify-center"><Users aria-hidden="true" className="w-5 h-5" /></span>
           <span className="flex-1 font-medium text-ags-navy">{t('th.help', { n: help })}</span>
           <ArrowRight aria-hidden="true" className="w-5 h-5 text-ags-indigo flip-rtl" />
@@ -2500,7 +2549,7 @@ function MarkView({ id, sid }) {
 
 function Progress({ cls: clsIn }) {
   const { t, fmt, lang, now, db, actions, guide, markGuide } = useApp();
-  const [cls, setCls] = useState(clsIn || SARAH_CLASSES[0]);
+  const [cls, setCls] = useState(clsIn || DEMO_CLASSES[0]);
   useEffect(() => { if (guide.steps[2]) markGuide(5); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const list = teacherAssignments(db).filter((a) => a.classes.includes(cls) && isPublished(a, now) && now - a.dueAt < 42 * DAY).sort((x, y) => x.dueAt - y.dueAt);
   const help = supportList(db, cls, now);
@@ -2509,7 +2558,7 @@ function Progress({ cls: clsIn }) {
       <TeacherTabs />
       <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
         <div><h1 className="text-3xl font-bold text-ags-navy">{t('pg.title')}</h1><p className="text-ags-slate mt-1">{t('pg.sub')}</p></div>
-        <Segmented ariaLabel={t('pg.class')} value={cls} onChange={setCls} options={SARAH_CLASSES.map((c) => ({ value: c, label: clsLabel(c, lang) }))} />
+        <Segmented ariaLabel={t('pg.class')} value={cls} onChange={setCls} options={DEMO_CLASSES.map((c) => ({ value: c, label: clsLabel(c, lang) }))} />
       </div>
       <section className="card p-5 sm:p-6 mb-5" aria-labelledby="pg-h1">
         <h2 id="pg-h1" className="text-lg font-bold text-ags-navy">{t('pg.handedIn')}</h2>
@@ -2520,7 +2569,7 @@ function Progress({ cls: clsIn }) {
             return (
               <li key={a.id} className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,14rem)_1fr_auto] items-center gap-x-3 gap-y-1">
                 <span className="text-sm text-ags-navy truncate"><bdi>{a.title}</bdi>{open && <span className="ms-1.5 text-[0.68rem] font-bold text-ags-indigo bg-ags-indigo-50 rounded px-1.5">{t('pg.open')}</span>}</span>
-                <span className="col-span-2 sm:col-span-1 order-3 sm:order-none h-4 bg-slate-100 rounded-e overflow-hidden"><span className={cx('block h-full rounded-e transition-all duration-700', open ? 'bg-ags-indigo/60' : 'bg-ags-indigo')} style={{ width: `${s.rate * 100}%` }} /></span>
+                <span className="col-span-2 sm:col-span-1 order-3 sm:order-none h-4 bg-slate-100 rounded-e overflow-hidden"><Bar value={s.rate} open={open} /></span>
                 <span className="text-sm tabular text-ags-navy text-end whitespace-nowrap"><b>{fmt.pct(s.rate)}</b> <span className="text-ags-slate">· {t('th.handedIn', { n: s.handedIn, total: s.total })}</span></span>
               </li>
             );
@@ -2555,7 +2604,7 @@ const newQ = (type = 'mcq') => ({ id: uid('q'), type, prompt: '', options: ['', 
 function newDraft(now) {
   return {
     kind: null, title: '', instructions: '', instrTouched: false, worksheet: true, questions: [], writtenPrompt: '', outOf: 10,
-    classes: [SARAH_CLASSES[0]], due: 'tomorrow', dueDate: toYMD(atDay(3, 19, 0, now)), dueTime: '19:00',
+    classes: [DEMO_CLASSES[0]], due: 'tomorrow', dueDate: toYMD(atDay(3, 19, 0, now)), dueTime: '19:00',
     acceptLate: true, allowRedo: true, sendLater: false, sendDate: toYMD(atDay(1, 7, 0, now)), sendTime: '07:00', more: false,
   };
 }
@@ -2574,7 +2623,7 @@ function draftToAssignment(d, now, t, id = 'preview') {
   else blocks = [{ id: `${id}_b1`, type: 'paper', prompt: t('sh.photoPrompt'), points: d.outOf, required: true }];
   const title = d.title.trim() || '—';
   return {
-    id, title, instructions: d.instructions.trim(), subject: 'math', teacherId: DEMO_TEACHER, classes: d.classes.length ? d.classes : [SARAH_CLASSES[0]],
+    id, title, instructions: d.instructions.trim(), subject: 'math', teacherId: DEMO_TEACHER, classes: d.classes.length ? d.classes : [DEMO_CLASSES[0]],
     lang: /[؀-ۿ]/.test(title + d.instructions) ? 'ar' : 'en', blocks, points: sum(blocks.map((b) => b.points)),
     attachments: d.worksheet && d.kind !== 'quiz' ? [{ id: `${id}_att`, kind: 'worksheet', name: `${title}.pdf` }] : [],
     publishAt, dueAt: draftDue(d, now), status: publishAt > now ? 'scheduled' : 'published',
@@ -2617,7 +2666,7 @@ function SetHomework() {
     setBuilder(newDraft(now)); setErrors({});
     navigate({ name: 'home' });
   };
-  const sendLabel = d.sendLater ? t('sh.schedule', { when: `${fmt.date(a.publishAt)}, ${fmt.time(a.publishAt)}` }) : t('sh.send', { cls: clsList(d.classes.length ? d.classes : [SARAH_CLASSES[0]], lang) });
+  const sendLabel = d.sendLater ? t('sh.schedule', { when: `${fmt.date(a.publishAt)}, ${fmt.time(a.publishAt)}` }) : t('sh.send', { cls: clsList(d.classes.length ? d.classes : [DEMO_CLASSES[0]], lang) });
   const dueChips = [['tomorrow', 'sh.due.tomorrow'], ['2days', 'sh.due.2days'], ['week', 'sh.due.week'], ['custom', 'sh.due.custom']];
   const Err = ({ k }) => (errors[k] ? <p data-err="1" role="alert" className="mt-2 text-sm text-rose-700 flex items-center gap-1.5"><AlertCircle aria-hidden="true" className="w-4 h-4" />{errors[k]}</p> : null);
   return (
@@ -2703,7 +2752,7 @@ function SetHomework() {
           <Step n={3} title={t('sh.step3')}>
             <p className="label" id="sh-cls">{t('sh.classes')}</p>
             <div role="group" aria-labelledby="sh-cls" className="flex flex-wrap gap-2">
-              {SARAH_CLASSES.map((c) => {
+              {DEMO_CLASSES.map((c) => {
                 const on = d.classes.includes(c);
                 return <button key={c} type="button" aria-pressed={on} onClick={() => set({ classes: on ? d.classes.filter((x) => x !== c) : [...d.classes, c].sort() })} className={cx('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[0.95rem] ring-1 min-h-[2.6rem]', on ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white text-ags-navy ring-slate-300 hover:ring-ags-indigo')}>{on ? <Check aria-hidden="true" className="w-4 h-4" /> : <Plus aria-hidden="true" className="w-4 h-4" />}<bdi>{clsLabel(c, lang)}</bdi></button>;
               })}
@@ -2763,11 +2812,6 @@ function StudentPreview({ a }) {
  * Grade 8B1–8B3 Mathematics and 8B1 update live; everything else is fixed sample data.
  * ========================================================================== */
 
-const SUBJECT_TEACHER = (subject, grade) => {
-  if (subject === 'math') return grade === 8 ? 'sarah' : 'farouk';
-  if (subject === 'english') return grade === 8 ? 'emily' : 'maha';
-  return { science: 'yusuf', arabic: 'mona', islamic: 'abdullah', social: 'hassan', ict: 'adel', art: 'lina' }[subject];
-};
 /** Admin weeks are calendar school weeks: the Sunday on or before today. */
 function adminWeekStart(now, off = 0) { const d = new Date(startOfDay(now)); d.setDate(d.getDate() - d.getDay() + off * 7); return d.getTime(); }
 
@@ -2778,7 +2822,7 @@ function adminEntries(db, now) {
     ADMIN_CLASSES.forEach((cls, ci) => {
       const { g } = parseCls(cls);
       CORE_SUBJECTS.forEach((subject, si) => {
-        if (SARAH_CLASSES.includes(cls) && subject === 'math') return; // live
+        if (DEMO_CLASSES.includes(cls) && subject === 'math') return; // live
         if (cls === STUDENT_OMAR.cls) return; // from the session's assignments
         const count = { math: 1, english: 1, science: 1, arabic: 1 }[subject] ?? (rnd() < 0.3 ? 1 : 0);
         for (let k = 0; k < count; k += 1) {
@@ -2822,7 +2866,7 @@ function AdminOverview() {
   const overall = rate(inWeek);
   const toMark = STATIC_BACKLOG + teacherAssignments(db).filter((a) => isPublished(a, now)).reduce((n, a) => n + sum(a.classes.map((c) => classStats(db, a, c, now).toGrade)), 0);
   const live = [];
-  SARAH_CLASSES.forEach((cls) => supportList(db, cls, now).filter((x) => x.miss >= 3).forEach((x) => live.push({ key: `fu_${x.stu.id}`, en: x.stu.en, ar: x.stu.ar, cls, missing: x.miss, subjects: ['math'] })));
+  DEMO_CLASSES.forEach((cls) => supportList(db, cls, now).filter((x) => x.miss >= 3).forEach((x) => live.push({ key: `fu_${x.stu.id}`, en: x.stu.en, ar: x.stu.ar, cls, missing: x.miss, subjects: ['math'] })));
   const followUp = [...live, ...STATIC_FOLLOWUP];
   const days = [0, 1, 2, 3, 4].map((i) => ws + i * DAY + 12 * HOUR);
   const load = (cls, d) => inWeek.filter((e) => e.cls === cls && toYMD(e.dueAt) === toYMD(d)).length;
@@ -2839,14 +2883,16 @@ function AdminOverview() {
   const cell = (n) => (n >= 3 ? 'bg-amber-100 ring-2 ring-amber-400 text-amber-950 font-bold' : n === 2 ? 'bg-ags-indigo-100 text-ags-navy' : n === 1 ? 'bg-ags-indigo-50 text-ags-navy' : 'bg-slate-50 text-slate-400');
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-        <div><p className="text-sm font-medium text-ags-indigo">{t('ad.user')}</p><h1 className="text-3xl font-bold text-ags-navy">{t('ad.title')}</h1><p className="text-ags-slate mt-1">{t('ad.sub')}</p></div>
-        <Segmented ariaLabel={t('ad.week')} value={week} onChange={setWeek} options={[{ value: -1, label: t('ad.wk.prev') }, { value: 0, label: t('ad.wk.this') }, { value: 1, label: t('ad.wk.next') }]} />
-      </div>
+      <Hero>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div><p className="text-sm font-medium text-ags-gold">{t('ad.user')}</p><h1 className="text-3xl sm:text-[2.15rem] font-bold mt-1">{t('ad.title')}</h1><p className="text-white/80 mt-1">{t('ad.sub')}</p></div>
+          <Segmented dark ariaLabel={t('ad.week')} value={week} onChange={setWeek} options={[{ value: -1, label: t('ad.wk.prev') }, { value: 0, label: t('ad.wk.this') }, { value: 1, label: t('ad.wk.next') }]} />
+        </div>
+      </Hero>
       <div className="grid sm:grid-cols-3 gap-4 mb-6">
-        <StatCard size="lg" icon={TrendingUp} tone="green" value={overall == null ? '—' : fmt.pct(overall)} label={t('ad.k.handedIn')} hint={overall == null ? t('ad.noneDue') : undefined} />
-        <StatCard size="lg" icon={Inbox} tone="gold" value={fmt.n(toMark)} label={t('ad.k.toMark')} />
-        <StatCard size="lg" icon={Users} tone="amber" value={fmt.n(followUp.length)} label={t('ad.k.followUp')} />
+        <StatCard size="lg" icon={TrendingUp} tone="green" value={overall == null ? '—' : <CountUp value={overall} format={(v) => fmt.pct(v)} />} label={t('ad.k.handedIn')} hint={overall == null ? t('ad.noneDue') : undefined} />
+        <StatCard size="lg" icon={Inbox} tone="gold" value={<CountUp value={toMark} format={(v) => fmt.n(Math.round(v))} />} label={t('ad.k.toMark')} />
+        <StatCard size="lg" icon={Users} tone="amber" value={<CountUp value={followUp.length} format={(v) => fmt.n(Math.round(v))} />} label={t('ad.k.followUp')} />
       </div>
 
       <section className="card p-5 sm:p-6 mb-5" aria-labelledby="ad-load">
@@ -2881,7 +2927,7 @@ function AdminOverview() {
               {[6, 7, 8].map((g) => { const v = rate(inWeek.filter((e) => e.grade === g)); return (
                 <li key={g} className="grid grid-cols-[5.5rem_1fr_3rem] items-center gap-3">
                   <span className="text-sm text-ags-navy">{t('ad.gradeN', { g })}</span>
-                  <span className="h-5 bg-slate-100 rounded-e overflow-hidden"><span className="block h-full bg-ags-indigo rounded-e transition-all duration-700" style={{ width: `${(v || 0) * 100}%` }} /></span>
+                  <span className="h-5 bg-slate-100 rounded-e overflow-hidden"><Bar value={v || 0} /></span>
                   <span className="text-sm font-bold tabular text-end">{v == null ? '—' : fmt.pct(v)}</span>
                 </li>
               ); })}

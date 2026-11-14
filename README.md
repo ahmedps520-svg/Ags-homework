@@ -39,7 +39,7 @@ Click **Demo steps** (bottom corner) to see the six steps; tap any step to jump 
 
 1. **Teacher → Set homework.** Choose **Photo of written work**, type *Fractions Review*, keep **8B1** and **Tomorrow**, press **Send to 8B1**.
 2. **Student.** *Fractions Review* is at the top of **To do**. Open it → **No camera? Use a sample page** → pick a page → **Hand in**.
-3. **Teacher.** **Start marking** → tap the photo to add ticks → choose a mark → tap a quick comment → **Send back to Omar**.
+3. **Teacher (Mr. Nabil).** **Start marking** → tap the photo to add ticks → choose a mark → tap a quick comment → **Send back to Omar**.
 4. **Student.** The homework shows the mark, the comment and the teacher’s ticks on the photo.
 5. **Teacher → Progress.** *Fractions Review* now shows Omar’s hand-in.
 6. **Admin.** **Latest activity** shows the hand-in and the return as they happened.
@@ -50,7 +50,13 @@ designs. **Settings** (gear icon) has text size, reduce motion and **Reset demo*
 ## Classes
 
 Class codes follow the school’s own naming: boys’ sections **8B1, 8B2, 8B3**, girls’ sections **8G1, 8G2**,
-and KG sections with letters (**KG2-A**). The demo teacher, Ms. Sarah Hassan, teaches Mathematics to 8B1–8B3.
+and KG sections with letters (**KG2-A**). Boys’ sections are taught by male teachers: the demo teacher, **Mr. Nabil Al-Omari**,
+teaches Mathematics to 8B1–8B3. KG keeps female teachers.
+
+## Logo
+
+Put the school’s official logo in `src/assets/` as `ags-logo.svg` (or `.png` / `.webp` / `.jpg`) and run
+`npm run build:single`. The header uses it automatically; until then it shows the school’s name as text.
 
 ## What’s in it
 
@@ -61,6 +67,17 @@ and KG sections with letters (**KG2-A**). The demo teacher, Ms. Sarah Hassan, te
 | Admin | Homework handed in, work waiting to be marked, students to follow up, homework due per class each day with overloaded days highlighted, and live activity. Grade 8 boys’ Mathematics and 8B1 update live; other figures are fixed sample data. |
 | Ages | KG–Grade 3: large illustrated cards and very short sentences. Grades 4–8: balanced. Grades 9–12: compact. |
 | Accessibility | Status always shown as icon + text, visible focus rings, keyboard-operable controls, adjustable text size and reduced motion. |
+
+## Ideas for the next version
+
+1. **Overload warning while setting homework** — “8B1 already has 3 assignments due on Tuesday” before the teacher presses Send.
+2. **Parent weekly summary** — one calm message in Arabic or English: what’s due, what’s late, latest feedback.
+3. **Voice** — teachers record a short spoken comment; students hand in audio for Qur’an recitation, Arabic reading or English speaking.
+4. **Read-aloud for KG–Grade 3** — a speaker button reads the instructions to younger children.
+5. **Reuse homework** — copy last year’s homework, share it with the department, build a question bank.
+6. **Smart reminders** — a reminder the evening before the due date, and automatic extensions for absent students.
+7. **“How hard was this?”** — one tap after handing in, so teachers can see which homework was too hard.
+8. **Marks export** — send marks to the school’s gradebook or report cards as a spreadsheet.
 
 ## Code
 
