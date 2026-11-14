@@ -310,6 +310,12 @@ const T = {
 };
 Object.assign(T, {
   /* --- assignment page --- */
+  'card.new': ['New', 'جديد'],
+  'enc.start': [{ one: '1 assignment due this week — start with the nearest deadline.', other: '{n} assignments due this week — start with the nearest deadline.' }, { one: 'واجب واحد مطلوب هذا الأسبوع — ابدأ بالأقرب موعدًا.', two: 'واجبان مطلوبان هذا الأسبوع — ابدأ بالأقرب موعدًا.', few: '{n} واجبات مطلوبة هذا الأسبوع — ابدأ بالأقرب موعدًا.', many: '{n} واجبًا مطلوبًا هذا الأسبوع — ابدأ بالأقرب موعدًا.', other: '{n} واجب مطلوب هذا الأسبوع — ابدأ بالأقرب موعدًا.' }],
+  'enc.start.early': [{ one: '1 thing to do this week.', other: '{n} things to do this week.' }, { one: 'لديك واجب واحد هذا الأسبوع.', two: 'لديك واجبان هذا الأسبوع.', few: 'لديك {n} واجبات هذا الأسبوع.', many: 'لديك {n} واجبًا هذا الأسبوع.', other: 'لديك {n} واجب هذا الأسبوع.' }],
+  'guide.next': ['next: step {n}', 'التالي: الخطوة {n}'],
+  'ad.noneDue': ['No deadlines have passed yet in this week.', 'لم يحن أي موعد تسليم بعد في هذا الأسبوع.'],
+  'ad.kpi.completion.hint': ['Deadlines passed this week', 'للمواعيد المنتهية هذا الأسبوع'],
   'back.home': ['Back to my homework', 'العودة إلى واجباتي'],
   'a.due': ['Due', 'موعد التسليم'],
   'a.points': ['Points', 'الدرجة'],
@@ -665,7 +671,7 @@ Object.assign(T, {
   'ad.wk.prev': ['Last week', 'الأسبوع الماضي'],
   'ad.wk.this': ['This week', 'هذا الأسبوع'],
   'ad.wk.next': ['Next week', 'الأسبوع القادم'],
-  'ad.soFar': ['Work handed in so far, for assignments due in the selected week', 'الأعمال المُسلَّمة حتى الآن للواجبات المطلوبة في الأسبوع المحدد'],
+  'ad.soFar': ['Share of work handed in, for deadlines that have passed in the selected week', 'نسبة الأعمال المُسلَّمة للواجبات التي انتهى موعدها في الأسبوع المحدد'],
   'ad.tipHanded': ['{n} of {total} handed in', 'سُلِّم {n} من {total}'],
   'ad.kpi.completion': ['Homework completion', 'إنجاز الواجبات'],
   'ad.kpi.outstanding': ['Outstanding submissions', 'تسليمات متبقية'],
@@ -1294,7 +1300,7 @@ function buildSeed(now = Date.now()) {
         const submittedAt = outcome === 'late'
           ? Math.min(a.dueAt + (3 + r() * 30) * HOUR, now - 2 * HOUR)
           : open ? Math.max(a.publishAt + 2 * HOUR, now - (2 + r() * 40) * HOUR) : a.dueAt - (2 + r() * 40) * HOUR;
-        const sub = { status: 'submitted', submittedAt, late: submittedAt > a.dueAt, draftSavedAt: submittedAt };
+        const sub = { status: 'submitted', submittedAt, late: submittedAt > a.dueAt, draftSavedAt: submittedAt, answers: {} };
         // answers
         a.blocks.forEach((b) => {
           if (b.type === 'paper') {
@@ -1560,7 +1566,7 @@ function SubjectArt({ code }) {
 }
 
 function Avatar({ name, size = 'md', tone = 'indigo' }) {
-  const initials = (name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w.replace(/^(Al-|ال)/, '')[0]).join('');
+  const initials = (name || '?').split(/\s+/).filter((w) => w && !/^(of|and|the)$/i.test(w)).slice(0, 2).map((w) => w.replace(/^(Al-|ال)/, '')[0]).join('');
   const dims = size === 'sm' ? 'w-8 h-8 text-xs' : size === 'lg' ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm';
   const tones = { indigo: 'bg-ags-indigo-100 text-ags-indigo', gold: 'bg-ags-gold text-ags-navy', navy: 'bg-ags-navy text-ags-gold' };
   return <span aria-hidden="true" className={cx('inline-flex items-center justify-center rounded-full font-bold shrink-0', dims, tones[tone])}>{initials}</span>;
@@ -1682,7 +1688,7 @@ function PageHeader({ title, subtitle, actions, onBack, backLabel, eyebrow }) {
       <div className="flex flex-wrap items-end gap-3 justify-between">
         <div className="min-w-0">
           {eyebrow && <div className="mb-1">{eyebrow}</div>}
-          <h1 className="text-2xl sm:text-[1.7rem] font-bold text-ags-navy leading-tight" dir="auto">{title}</h1>
+          <h1 className="text-2xl sm:text-[1.7rem] font-bold text-ags-navy leading-tight"><bdi>{title}</bdi></h1>
           {subtitle && <p className="text-ags-slate mt-1">{subtitle}</p>}
         </div>
         {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -1978,12 +1984,14 @@ function Footer({ onAbout }) {
 function DemoGuide() {
   const { t, guide, setGuide, guideGo } = useApp();
   const done = [1, 2, 3, 4, 5, 6].filter((i) => guide.steps[i]).length;
+  const nextStep = [1, 2, 3, 4, 5, 6].find((i) => !guide.steps[i]);
   if (!guide.open) {
     return (
       <button type="button" onClick={() => setGuide((g) => ({ ...g, open: true }))}
-        className="fixed z-40 bottom-[5.25rem] lg:bottom-5 end-4 btn btn-gold shadow-lg rounded-full">
+        key={done} className={cx('fixed z-40 bottom-[5.25rem] lg:bottom-5 end-4 btn btn-gold shadow-lg rounded-full', done > 0 && 'ags-flash')}>
         <Sparkles aria-hidden="true" className="w-4 h-4" />{t('guide.title')}
         <span className="text-xs font-bold bg-ags-navy text-ags-gold rounded-full px-1.5 tabular">{t('guide.progress', { n: done })}</span>
+        {nextStep && <span className="hidden sm:inline text-xs font-medium">· {t('guide.next', { n: nextStep })}</span>}
       </button>
     );
   }
@@ -1996,15 +2004,15 @@ function DemoGuide() {
         <button type="button" className="btn btn-icon text-white/85 hover:bg-white/10 !min-h-0 !min-w-0 w-8 h-8" onClick={() => setGuide((g) => ({ ...g, open: false }))} aria-label={t('guide.hide')}><X aria-hidden="true" className="w-4 h-4" /></button>
       </div>
       <ProgressBar value={done} max={6} tone="gold" height="h-1" className="rounded-none" label={t('guide.title')} />
-      <ol className="p-3 space-y-1 max-h-[50vh] overflow-y-auto">
+      <ol className="p-2.5 space-y-0.5 max-h-[50vh] overflow-y-auto">
         {[1, 2, 3, 4, 5, 6].map((i) => {
-          const ok = guide.steps[i];
+          const ok = guide.steps[i]; const current = i === nextStep;
           return (
-            <li key={i} className={cx('flex items-start gap-2.5 rounded-xl p-2', ok ? 'bg-emerald-50/70' : 'hover:bg-slate-50')}>
+            <li key={i} className={cx('flex items-start gap-2.5 rounded-xl px-2 py-1.5', ok ? 'bg-emerald-50/70' : current ? 'bg-ags-gold-50 ring-1 ring-amber-200' : 'hover:bg-slate-50')}>
               <span aria-hidden="true" className={cx('mt-0.5 w-6 h-6 rounded-full shrink-0 inline-flex items-center justify-center text-xs font-bold', ok ? 'bg-emerald-600 text-white' : 'bg-ags-indigo-50 text-ags-indigo')}>
                 {ok ? <Check className="w-3.5 h-3.5" /> : i}
               </span>
-              <span className={cx('text-[0.82rem] leading-snug flex-1', ok ? 'text-emerald-900' : 'text-ags-navy')}>
+              <span className={cx('text-[0.8rem] leading-snug flex-1 min-w-0', ok ? 'text-emerald-900' : 'text-ags-navy', !current && 'line-clamp-1')}>
                 <span className="sr-only">{ok ? `${t('guide.done')}: ` : ''}</span>{t(`guide.s${i}`)}
               </span>
               <button type="button" className="btn btn-sm btn-ghost !min-h-[2rem] px-2" onClick={() => guideGo(i)} aria-label={`${t('guide.go')} — ${i}`}>
@@ -2065,8 +2073,9 @@ function latePolicyText(t, fmt, a) {
 function lateLine(t, fmt, a, now) {
   const p = a.latePolicy || {};
   if (p.mode === 'none') return t('late.closed');
-  if (p.mode === 'until') return p.until && now <= p.until ? t('late.acceptUntil', { date: fmt.date(p.until) }) : t('late.closed');
-  return t('late.accept');
+  const open = p.mode !== 'until' || (p.until && now <= p.until);
+  const base = p.mode === 'until' ? (open ? t('late.acceptUntil', { date: fmt.date(p.until) }) : t('late.closed')) : t('late.accept');
+  return open && p.deduct ? `${base} · ${t('late.deduct', { pct: fmt.pct((p.pct || 0) / 100) })}` : base;
 }
 
 function AssignmentCard({ item }) {
@@ -2078,6 +2087,7 @@ function AssignmentCard({ item }) {
   const isRet = st === 'returned' || st === 'revision';
   const isOver = st === 'overdue' || st === 'closed';
   const isDone = ['submitted', 'submittedLate'].includes(st);
+  const isNew = st === 'notStarted' && now - a.publishAt < DAY;
   const due = isOver ? `${t('due.was', { when: fmt.date(a.dueAt) })} · ${t('late.days', { n: lateDays(a.dueAt, now) })}` : dueLabel(t, fmt, a.dueAt, now);
   const markPill = isRet && typeof sub?.mark === 'number' ? (
     <span className="inline-flex items-baseline gap-1 rounded-lg bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 px-2.5 py-1 font-bold tabular">{fmt.score(sub.mark, a.points)}</span>
@@ -2091,7 +2101,7 @@ function AssignmentCard({ item }) {
         <SubjectArt code={a.subject} />
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-medium" style={{ color }}>{subjName(a.subject, lang)}</span>
-          <span className="block text-xl font-bold text-ags-navy leading-snug mt-0.5" dir="auto">{a.title}</span>
+          <span className="block text-xl font-bold text-ags-navy leading-snug mt-0.5"><bdi>{a.title}</bdi>{isNew && <span className="ms-2 align-middle text-xs font-bold rounded-full bg-ags-gold text-ags-navy px-2 py-0.5">{t('card.new')}</span>}</span>
           <span className="mt-2 flex flex-wrap items-center gap-2">
             {!isRet && !isDone && <span className="inline-flex items-center gap-1.5 text-base text-ags-slate"><CalendarDays aria-hidden="true" className="w-5 h-5" />{isOver ? t('st.overdue') : when}</span>}
             <StatusChip status={st} size="lg" />
@@ -2108,7 +2118,7 @@ function AssignmentCard({ item }) {
       <button type="button" onClick={open} className="w-full text-start px-4 py-3 grid grid-cols-[1fr_auto] sm:grid-cols-[9rem_1fr_auto_auto] items-center gap-x-4 gap-y-1 hover:bg-ags-indigo-50/50 transition-colors">
         <span className="hidden sm:block"><SubjectTag code={a.subject} /></span>
         <span className="min-w-0">
-          <span className="block font-medium text-ags-navy truncate" dir="auto">{a.title}</span>
+          <span className="block font-medium text-ags-navy truncate">{isNew && <span className="me-2 text-[0.65rem] font-bold rounded bg-ags-gold text-ags-navy px-1.5 py-0.5">{t('card.new')}</span>}<bdi>{a.title}</bdi></span>
           <span className="block text-xs text-ags-slate truncate">
             <span className="sm:hidden">{subjName(a.subject, lang)} · </span>{teacherName(a.teacherId, lang)} · {t(`type.${type}`)} · {t('pts', { n: a.points })}
           </span>
@@ -2131,7 +2141,7 @@ function AssignmentCard({ item }) {
           <SubjectTag code={a.subject} />
           <span className="text-xs text-ags-slate">· {teacherName(a.teacherId, lang)}</span>
         </span>
-        <span className="block font-bold text-ags-navy text-[1.05rem] mt-1 leading-snug" dir="auto">{a.title}</span>
+        <span className="block font-bold text-ags-navy text-[1.05rem] mt-1 leading-snug"><bdi>{a.title}</bdi>{isNew && <span className="ms-2 align-middle text-[0.68rem] font-bold rounded-full bg-ags-gold text-ags-navy px-2 py-0.5">{t('card.new')}</span>}</span>
         <span className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ags-slate">
           {!isRet && <span className="inline-flex items-center gap-1.5"><Clock aria-hidden="true" className="w-4 h-4" />{isDone && sub?.submittedAt ? `${t('st.submitted')} · ${agoLabel(t, sub.submittedAt, now)}` : due}</span>}
           {isRet && sub?.returnedAt && <span className="inline-flex items-center gap-1.5"><CheckCircle2 aria-hidden="true" className="w-4 h-4" />{t('fb.returnedOn', { when: agoLabel(t, sub.returnedAt, now) })}</span>}
@@ -2143,7 +2153,7 @@ function AssignmentCard({ item }) {
       <span className="flex flex-col items-end gap-2 shrink-0">
         <StatusChip status={st} />
         {markPill}
-        {st === 'revision' && <span className="text-xs font-medium text-ags-indigo">{t('resubmit')} →</span>}
+        {st === 'revision' && <span className="text-xs font-medium text-ags-indigo inline-flex items-center gap-1">{t('resubmit')}<ArrowRight aria-hidden="true" className="w-3.5 h-3.5 flip-rtl" /></span>}
         <ChevronRight aria-hidden="true" className="w-5 h-5 text-slate-400 group-hover:text-ags-indigo flip-rtl mt-auto" />
       </span>
     </button>
@@ -2200,7 +2210,7 @@ function StudentDashboard() {
 
   const f = items.filter((x) => subject === 'all' || x.a.subject === subject);
   const isOpenSt = (x) => ['notStarted', 'draft'].includes(x.st) && (x.a.dueAt >= now || x.sub?.resubmitting);
-  const dueSoonAll = f.filter(isOpenSt).sort((p, q) => p.a.dueAt - q.a.dueAt);
+  const dueSoonAll = f.filter(isOpenSt).sort((p, q) => p.a.dueAt - q.a.dueAt || q.a.publishAt - p.a.publishAt);
   const dueSoon = day ? dueSoonAll.filter((x) => toYMD(x.a.dueAt) === day) : dueSoonAll;
   const overdue = f.filter((x) => ['overdue', 'closed'].includes(x.st) && now - x.a.dueAt < 21 * DAY).sort((p, q) => q.a.dueAt - p.a.dueAt);
   const returned = f.filter((x) => x.st === 'revision' || (x.st === 'returned' && now - (x.sub.returnedAt || 0) < 10 * DAY)).sort((p, q) => (q.sub.returnedAt || 0) - (p.sub.returnedAt || 0));
@@ -2219,6 +2229,7 @@ function StudentDashboard() {
   const allOnTime = thisWeek.length > 0 && weekLeft === 0 && weekDone.every((x) => !x.sub?.late);
   const next = dueSoonAll[0];
   const enc = !thisWeek.length ? t('enc.none') : allOnTime ? t.s('enc.allOnTime', stage)
+    : weekLeft > 0 && weekDone.length === 0 && stage !== 'senior' ? t.s('enc.start', stage, { n: weekLeft })
     : weekLeft > 0 ? t.s('enc.left', stage, { n: weekLeft, next: next ? `${next.a.title} — ${dueLabel(t, fmt, next.a.dueAt, now)}` : '—' }) : t('enc.progress', { done: weekDone.length, total: thisWeek.length });
 
   const hour = new Date(now).getHours();
@@ -2253,7 +2264,7 @@ function StudentDashboard() {
       {reminders.map((r) => (
         <div key={r.id} className="card p-4 mb-4 flex flex-wrap items-center gap-3 border-s-4 border-ags-gold ags-fade-up">
           <Bell aria-hidden="true" className="w-5 h-5 text-ags-indigo" />
-          <p className="flex-1 text-sm text-ags-navy min-w-[12rem]">{t('reminder.text', { teacher: teacherName(r.teacherId, lang), title: db.assignments[r.assignmentId]?.title })}</p>
+          <p className="flex-1 text-sm text-ags-navy min-w-[12rem]">{t('reminder.text', { teacher: teacherName(r.teacherId, lang), title: `\u2068${db.assignments[r.assignmentId]?.title}\u2069` })}</p>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate({ name: 'assignment', id: r.assignmentId })}>{t('reminder.open')}</button>
           <button type="button" className="btn btn-ghost btn-icon" aria-label={t('dismiss')} onClick={() => actions.dismissReminder(r.id)}><X aria-hidden="true" className="w-4 h-4" /></button>
         </div>
@@ -2270,7 +2281,7 @@ function StudentDashboard() {
         <div className="grid lg:grid-cols-[1fr_minmax(0,26rem)] gap-4 mb-7 items-start">
           <div className="min-w-0">
             <p className="label">{t('filter.subjects')}</p>
-            <div className="scroll-x -mx-1 px-1"><div className="flex gap-2 pb-1 w-max">
+            <div className="scroll-x -mx-1 px-1"><div className="flex gap-2 pb-1 w-max lg:w-auto lg:flex-wrap">
               {['all', ...subjectsPresent].map((s) => (
                 <button key={s} type="button" aria-pressed={subject === s} onClick={() => setSubject(s)}
                   className={cx('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm ring-1 transition-colors min-h-[2.25rem]', subject === s ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white text-ags-navy ring-slate-200 hover:ring-ags-indigo')}>
@@ -2362,7 +2373,7 @@ function AssignmentHeader({ a, st }) {
         <SubjectBadge code={a.subject} size={stage === 'early' ? 'xl' : 'lg'} />
         <div className="flex-1 min-w-[12rem]">
           <SubjectTag code={a.subject} />
-          <h1 dir="auto" className={cx('font-bold text-ags-navy mt-1 leading-tight', stage === 'early' ? 'text-3xl' : 'text-2xl sm:text-[1.7rem]')}>{a.title}</h1>
+          <h1 className={cx('font-bold text-ags-navy mt-1 leading-tight', stage === 'early' ? 'text-3xl' : 'text-2xl sm:text-[1.7rem]')}><bdi>{a.title}</bdi></h1>
           <p className="text-ags-slate mt-1 text-sm">{teacherName(a.teacherId, lang)} · {clsList(a.classes, lang)}</p>
         </div>
         {st && <StatusChip status={st} size="lg" />}
@@ -2558,7 +2569,7 @@ function QuestionCard({ a, b, index, value, onChange, readOnly, showResults, onO
   } else if (b.type === 'paper') {
     const pages = Array.isArray(value) ? value : [];
     body = (
-      <div className="rounded-2xl ring-1 ring-dashed ring-ags-indigo/30 bg-ags-indigo-50/40 p-4">
+      <div className="rounded-2xl border border-dashed border-ags-indigo/40 bg-ags-indigo-50/40 p-4">
         {pages.length > 0 ? (
           <>
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -3186,7 +3197,7 @@ function PaperUpload({ id, blockId }) {
                 </li>
               ))}
               <li className="shrink-0 w-36 md:w-auto">
-                <button type="button" onClick={() => setShowSamples(true)} className="w-full h-full min-h-[8rem] rounded-xl ring-1 ring-dashed ring-ags-indigo/40 text-ags-indigo hover:bg-ags-indigo-50 flex flex-col items-center justify-center gap-1.5 p-3 text-sm font-medium">
+                <button type="button" onClick={() => setShowSamples(true)} className="w-full h-full min-h-[8rem] rounded-xl border-2 border-dashed border-ags-indigo/40 text-ags-indigo hover:bg-ags-indigo-50 flex flex-col items-center justify-center gap-1.5 p-3 text-sm font-medium">
                   <Plus aria-hidden="true" className="w-6 h-6" />{t('p.add')}
                 </button>
               </li>
@@ -3352,7 +3363,7 @@ function TeacherDashboard() {
               </li>
             ))}
             {scheduled.map((a) => (
-              <li key={a.id} className="rounded-xl p-3 ring-1 ring-dashed ring-sky-300 bg-sky-50/40">
+              <li key={a.id} className="rounded-xl p-3 border border-dashed border-sky-300 bg-sky-50/40">
                 <span className="flex flex-wrap items-center gap-2"><span className="font-medium text-ags-navy flex-1" dir="auto">{a.title}</span><StatusChip status="scheduled" size="sm" /></span>
                 <span className="block text-xs text-ags-slate mt-1">{clsList(a.classes, lang)} · {t('ta.publishes', { when: `${fmt.date(a.publishAt)} · ${fmt.time(a.publishAt)}` })}</span>
               </li>
@@ -3767,7 +3778,7 @@ function AssignmentBuilder() {
                 <form className="mt-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); const u = linkUrl.trim(); if (!u) return; const url = /^https?:\/\//i.test(u) ? u : `https://${u}`; set({ attachments: [...d.attachments, { id: uid('att'), kind: 'link', name: u, url }] }); setLinkUrl(''); }}>
                   <label htmlFor="b-link" className="sr-only">{t('b.att.link')}</label>
                   <input id="b-link" className="input !min-h-[2.4rem]" dir="ltr" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder={t('b.att.linkPh')} />
-                  <button type="submit" className="btn btn-secondary btn-sm"><Link2 aria-hidden="true" className="w-4 h-4" />{t('b.att.link')}</button>
+                  <button type="submit" className="btn btn-secondary btn-sm whitespace-nowrap"><Link2 aria-hidden="true" className="w-4 h-4" />{t('b.att.link')}</button>
                 </form>
               </section>
 
@@ -4125,7 +4136,7 @@ function GradingView({ id, sid }) {
             )}
             <div className="grid gap-2">
               <button type="button" className="btn btn-primary btn-lg" onClick={() => save('returned')}><Send aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('g.return')}</button>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2">
                 <button type="button" className="btn btn-secondary" onClick={() => save('revision')}><RotateCcw aria-hidden="true" className="w-4 h-4" />{t('g.revise')}</button>
                 <button type="button" className="btn btn-ghost" onClick={() => save('graded')}><BadgeCheck aria-hidden="true" className="w-4 h-4" />{t('g.save')}</button>
               </div>
@@ -4176,7 +4187,7 @@ function DataTable({ head, rows }) {
 function LineChart({ points, label }) {
   const { fmt, dir } = useApp();
   const [hover, setHover] = useState(null);
-  const W = 620; const H = 230; const P = { l: 40, r: 24, t: 18, b: 36 };
+  const W = 620; const H = 240; const P = { l: 44, r: 28, t: 32, b: 36 };
   const n = points.length;
   const xAt = (i) => { const x = n <= 1 ? (W - P.l - P.r) / 2 : (i * (W - P.l - P.r)) / (n - 1); return dir === 'rtl' ? W - P.r - x : P.l + x; };
   const yAt = (v) => P.t + (1 - v) * (H - P.t - P.b);
@@ -4242,7 +4253,7 @@ function ClassInsights({ cls: clsIn }) {
               <li key={d.a.id}>
                 <HoverTip label={`${d.a.title}: ${fmt.pct(d.s.rate)}`} tip={`${t('td.handedIn', { n: d.s.handedIn, total: d.s.total })}${d.open ? ` · ${t('in.open')}` : ''}`} className="grid grid-cols-[minmax(0,10rem)_1fr_3rem] sm:grid-cols-[minmax(0,13rem)_1fr_3rem] items-center gap-3 rounded-lg focus-visible:bg-ags-indigo-50">
                   <span className="text-sm text-ags-navy truncate" dir="auto">{shortTitle(d.a)}{d.open && <span className="ms-1.5 text-[0.65rem] font-bold uppercase text-ags-indigo bg-ags-indigo-50 rounded px-1">{t('in.open')}</span>}</span>
-                  <span className="h-5 bg-slate-100 rounded-e overflow-hidden"><span className={cx('block h-full rounded-e transition-all duration-700', d.open ? 'bg-ags-indigo/70' : 'bg-ags-indigo')} style={{ width: `${d.s.rate * 100}%`, maxWidth: '100%' }} /></span>
+                  <span className="h-5 bg-slate-100 rounded-e overflow-hidden"><span className={cx('block h-full rounded-e transition-all duration-700', d.open ? 'bg-ags-indigo/60' : 'bg-ags-indigo')} style={{ width: `${d.s.rate * 100}%`, maxWidth: '100%' }} /></span>
                   <span className="text-sm font-bold tabular text-ags-navy text-end">{fmt.pct(d.s.rate)}</span>
                 </HoverTip>
               </li>
@@ -4312,19 +4323,22 @@ const SUBJECT_TEACHER = (subject, grade) => {
   return { science: 'yusuf', arabic: 'mona', islamic: 'abdullah', social: 'hassan', ict: 'adel', art: 'lina' }[subject];
 };
 
+/** Admin weeks are calendar school weeks: the Sunday on or before today. */
+function adminWeekStart(now, off = 0) { const d = new Date(startOfDay(now)); d.setDate(d.getDate() - d.getDay() + off * 7); return d.getTime(); }
+
 function adminEntries(db, now) {
   const out = [];
   const rnd = mulberry32(7310);
   [-1, 0, 1].forEach((w) => {
-    const ws = schoolWeekStart(now, w);
-    ADMIN_CLASSES.forEach((cls) => {
+    const ws = adminWeekStart(now, w);
+    ADMIN_CLASSES.forEach((cls, ci) => {
       const { g } = parseCls(cls);
-      CORE_SUBJECTS.forEach((subject) => {
+      CORE_SUBJECTS.forEach((subject, si) => {
         if (subject === 'math' && g === 8) return; // live
         if (cls === '8B') return; // 8B comes from the session's assignments
-        const count = { math: 2, english: 1, science: 1, arabic: 1, islamic: 1 }[subject] ?? (rnd() < 0.5 ? 1 : 0);
+        const count = { math: 1, english: 1, science: 1, arabic: 1 }[subject] ?? (rnd() < 0.3 ? 1 : 0);
         for (let k = 0; k < count; k += 1) {
-          let day = Math.floor(rnd() * 5);
+          let day = (ci + si * 2 + w + 5) % 5;
           if (cls === '7B' && w === 0 && ['math', 'english', 'science', 'arabic'].includes(subject) && k === 0) day = 2; // an overloaded Tuesday
           const dueAt = ws + day * DAY + 19 * HOUR;
           const size = 22 + Math.floor(rnd() * 4);
@@ -4369,14 +4383,17 @@ function AdminOverview() {
   const [week, setWeek] = useState(0);
   useEffect(() => { if (guide.steps[2]) markGuide(6); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const entries = useMemo(() => adminEntries(db, now), [db, now]);
-  const ws = schoolWeekStart(now, week); const we = ws + 7 * DAY;
+  const ws = adminWeekStart(now, week); const we = ws + 7 * DAY;
   const inWeek = entries.filter((e) => e.dueAt >= ws && e.dueAt < we);
   const gOk = (e) => grade === 'all' || e.grade === Number(grade);
   const sOk = (e) => subject === 'all' || e.subject === subject;
   const sel = inWeek.filter((e) => gOk(e) && sOk(e));
-  const rate = (xs) => (sum(xs.map((e) => e.size)) ? sum(xs.map((e) => e.handed)) / sum(xs.map((e) => e.size)) : 0);
+  // Completion counts only work whose deadline has passed — not-yet-due work isn't "missing".
+  const rate = (xs) => { const due = xs.filter((e) => e.dueAt <= now); return sum(due.map((e) => e.size)) ? sum(due.map((e) => e.handed)) / sum(due.map((e) => e.size)) : null; };
+  const pctOr = (v) => (v == null ? '—' : fmt.pct(v));
   const outstanding = sum(sel.map((e) => e.size - e.handed));
   const lateCount = sum(sel.map((e) => e.late));
+  const noneDue = rate(sel) == null;
 
   // grading backlog
   const sarahRows = teacherAssignments(db).filter((a) => isPublished(a, now));
@@ -4426,8 +4443,9 @@ function AdminOverview() {
       ))}
     </ul>
   );
-  const gradeRows = [6, 7, 8].filter((g) => grade === 'all' || g === Number(grade)).map((g) => { const xs = inWeek.filter((e) => e.grade === g && sOk(e)); return { key: g, label: t('ad.gradeN', { g }), v: rate(xs), n: xs.length, tip: t('ad.tipHanded', { n: sum(xs.map((e) => e.handed)), total: sum(xs.map((e) => e.size)) }) }; });
-  const subjRows = CORE_SUBJECTS.filter((s) => subject === 'all' || s === subject).map((s) => { const xs = inWeek.filter((e) => e.subject === s && gOk(e)); return { key: s, label: subjName(s, lang), dot: SUBJECTS[s].color, v: rate(xs), n: xs.length, tip: t('ad.tipHanded', { n: sum(xs.map((e) => e.handed)), total: sum(xs.map((e) => e.size)) }) }; });
+    const row = (key, label, xs, dot) => { const v = rate(xs); const due = xs.filter((e) => e.dueAt <= now); return { key, label, dot, v: v ?? 0, n: v == null ? 0 : due.length, tip: t('ad.tipHanded', { n: sum(due.map((e) => e.handed)), total: sum(due.map((e) => e.size)) }) }; };
+  const gradeRows = [6, 7, 8].filter((g) => grade === 'all' || g === Number(grade)).map((g) => row(g, t('ad.gradeN', { g }), inWeek.filter((e) => e.grade === g && sOk(e))));
+  const subjRows = CORE_SUBJECTS.filter((s) => subject === 'all' || s === subject).map((s) => row(s, subjName(s, lang), inWeek.filter((e) => e.subject === s && gOk(e)), SUBJECTS[s].color));
   const cellTone = (n) => (n >= 3 ? 'bg-amber-100 ring-2 ring-amber-400 text-amber-950 font-bold' : n === 2 ? 'bg-ags-indigo-100 text-ags-navy' : n === 1 ? 'bg-ags-indigo-50 text-ags-navy' : 'bg-slate-50 text-slate-400');
 
   return (
@@ -4445,7 +4463,7 @@ function AdminOverview() {
       <p className="mb-5 text-xs text-ags-slate flex gap-2 items-start"><Info aria-hidden="true" className="w-4 h-4 shrink-0" />{t('ad.liveNote')}</p>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-        <StatCard size="sm" icon={TrendingUp} tone="green" value={fmt.pct(rate(sel))} label={t('ad.kpi.completion')} hint={t('ad.soFar')} />
+        <StatCard size="sm" icon={TrendingUp} tone="green" value={pctOr(rate(sel))} label={t('ad.kpi.completion')} hint={rate(sel) == null ? t('ad.noneDue') : t('ad.kpi.completion.hint')} />
         <StatCard size="sm" icon={Inbox} tone="indigo" value={fmt.n(outstanding)} label={t('ad.kpi.outstanding')} />
         <StatCard size="sm" icon={Clock} tone="amber" value={fmt.n(lateCount)} label={t('ad.kpi.late')} />
         <StatCard size="sm" icon={ClipboardList} tone="gold" value={fmt.n(totalBacklog)} label={t('ad.kpi.backlog')} />
@@ -4454,10 +4472,10 @@ function AdminOverview() {
 
       <div className="grid xl:grid-cols-2 gap-5">
         <ChartCard id="ad-byg" title={t('ad.byGrade')} subtitle={t('ad.soFar')} table={<DataTable head={[t('ad.grade'), t('in.rate')]} rows={gradeRows.map((r) => [r.label, r.n ? fmt.pct(r.v) : '—'])} />}>
-          <Bars rows={gradeRows} id="ad-byg" />
+          {noneDue ? <EmptyState icon={CalendarClock} title={t('ad.noneDue')} /> : <Bars rows={gradeRows} id="ad-byg" />}
         </ChartCard>
         <ChartCard id="ad-bys" title={t('ad.bySubject')} subtitle={t('ad.soFar')} table={<DataTable head={[t('ad.subject'), t('in.rate')]} rows={subjRows.map((r) => [r.label, r.n ? fmt.pct(r.v) : '—'])} />}>
-          <Bars rows={subjRows} id="ad-bys" />
+          {noneDue ? <EmptyState icon={CalendarClock} title={t('ad.noneDue')} /> : <Bars rows={subjRows} id="ad-bys" />}
         </ChartCard>
 
         <section className="card p-5 xl:col-span-2" aria-labelledby="ad-load">
@@ -4584,7 +4602,7 @@ export default function App() {
   useEffect(() => { document.documentElement.style.fontSize = TEXT_SIZES[settings.textSize] || '100%'; }, [settings.textSize]);
   const viewKey = `${role}|${stage}|${route.name}|${route.id || ''}|${route.sid || ''}|${route.cls || ''}|${route.blockId || ''}`;
   useEffect(() => {
-    setLoading(true); window.scrollTo({ top: 0 });
+    setLoading(true); setNow(Date.now()); window.scrollTo({ top: 0 });
     const id = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(id);
   }, [viewKey]);
@@ -4642,6 +4660,7 @@ export default function App() {
         const at = Date.now();
         const a = draftToAssignment(draft, at, uid('a'));
         setDb((d) => ({ ...d, assignments: { ...d.assignments, [a.id]: a } }));
+        setNow(at);
         const clsTxt = clsList(a.classes, lang);
         if (a.status === 'scheduled') toast(i18n.t('b.scheduled', { when: `${fmt.date(a.publishAt)} · ${fmt.time(a.publishAt)}` }), { kind: 'success' });
         else {
@@ -4655,6 +4674,7 @@ export default function App() {
         const shift = dueAt - src.dueAt;
         const a = { ...JSON.parse(JSON.stringify(src)), id: uid('a'), classes, dueAt, publishAt: at, status: 'published', createdAt: at, latePolicy: { ...src.latePolicy, until: src.latePolicy?.until ? src.latePolicy.until + shift : null } };
         setDb((d) => ({ ...d, assignments: { ...d.assignments, [a.id]: a } }));
+        setNow(at);
         toast(i18n.t('dup.done', { cls: clsList(classes, lang), date: `${fmt.date(dueAt)} · ${fmt.time(dueAt)}` }), { kind: 'success' });
         return a;
       },
@@ -4702,6 +4722,7 @@ export default function App() {
     toast(t('demo.reset.done'), { kind: 'success' });
   };
   const guideGo = (i) => {
+    setGuide((x) => ({ ...x, open: false }));
     const g = guideRef.current; const aid = g.aid && db.assignments[g.aid] ? g.aid : null;
     if (i === 1) go('teacher', { name: 'create' });
     if (i === 2) go('student', { name: 'home' }, 'middle');
@@ -4745,7 +4766,7 @@ export default function App() {
         {role === 'student' && <AgePreviewBar />}
         <div className="flex">
           <Sidebar />
-          <main id="main" tabIndex={-1} className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-6 pb-36 lg:pb-12">
+          <main id="main" tabIndex={-1} className={cx('flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-6', guide.open ? 'pb-40 lg:pb-72' : 'pb-36 lg:pb-12')}>
             <div className="max-w-6xl mx-auto">
               {loading ? <ViewSkeleton /> : <div key={viewKey} className="ags-fade-up">{renderView()}</div>}
               <Footer onAbout={() => setModal('about')} />
