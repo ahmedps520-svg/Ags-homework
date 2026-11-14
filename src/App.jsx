@@ -120,7 +120,7 @@ const GLOBAL_CSS = `
 const T = {
   /* --- app & shell --- */
   'app.name': ['Homework Hub', 'منصة الواجبات'],
-  'app.school': ['Advanced Generations International Schools', 'مدارس الأجيال المتقدمة العالمية'],
+  'app.school': ['Advanced Generations International Schools', 'مدارس الأجيال المتطورة العالمية'],
   'app.city': ['Jeddah', 'جدة'],
   'role.label': ['View as', 'العرض بصفة'],
   'role.student': ['Student', 'طالب'],
@@ -154,7 +154,7 @@ const T = {
   'demo.reset.done': ['Demo reset to its sample data', 'أُعيد العرض إلى بياناته التجريبية'],
   'demo.footer': ['Demo — sample data', 'نسخة تجريبية — بيانات افتراضية'],
   'demo.about': ['About this demo', 'عن هذا العرض'],
-  'demo.about.body': ['This is a front-end demonstration of AGS Homework Hub. All people, classes, homework, marks and figures are fictional and kept in memory for this session only. Work saves automatically within the session; refreshing the page brings back the sample data. No real school accounts exist and no messages or notifications are sent.', 'هذا عرض تجريبي لواجهة منصة الواجبات في مدارس الأجيال المتقدمة العالمية. جميع الأسماء والشعب والواجبات والدرجات والأرقام افتراضية، وتُحفظ في الذاكرة خلال هذه الجلسة فقط. يُحفظ العمل تلقائيًا داخل الجلسة، وتحديث الصفحة يعيد البيانات التجريبية. لا توجد حسابات مدرسية حقيقية، ولا تُرسَل أي رسائل أو إشعارات.'],
+  'demo.about.body': ['This is a front-end demonstration of AGS Homework Hub. All people, classes, homework, marks and figures are fictional and kept in memory for this session only. Work saves automatically within the session; refreshing the page brings back the sample data. No real school accounts exist and no messages or notifications are sent.', 'هذا عرض تجريبي لواجهة منصة الواجبات في مدارس الأجيال المتطورة العالمية. جميع الأسماء والشعب والواجبات والدرجات والأرقام افتراضية، وتُحفظ في الذاكرة خلال هذه الجلسة فقط. يُحفظ العمل تلقائيًا داخل الجلسة، وتحديث الصفحة يعيد البيانات التجريبية. لا توجد حسابات مدرسية حقيقية، ولا تُرسَل أي رسائل أو إشعارات.'],
 
   /* --- demo steps --- */
   'guide.title': ['Demo steps', 'خطوات العرض'],
@@ -1667,7 +1667,7 @@ function Logo() {
   if (AGS_LOGO) {
     return (
       <div className="flex items-center gap-3 min-w-0">
-        <img src={AGS_LOGO} alt={t('app.school')} className="h-10 sm:h-12 w-auto object-contain shrink-0" />
+        <img src={AGS_LOGO} alt={t('app.school')} className="h-11 sm:h-14 w-auto object-contain shrink-0" />
         <span aria-hidden="true" className="hidden sm:block w-px h-8 bg-slate-200" />
         <span className="hidden sm:block font-bold text-ags-navy text-[1.05rem] whitespace-nowrap">{t('app.name')}</span>
       </div>
@@ -1705,7 +1705,7 @@ function TopBar({ onSettings }) {
   const { t } = useApp();
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200/70 shadow-[0_10px_30px_-24px_rgba(32,31,60,.45)]">
-      <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 h-[4.25rem]">
+      <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 h-[4.75rem]">
         <Logo />
         <div className="hidden md:flex flex-1 justify-center"><RoleSwitch /></div>
         <div className="ms-auto md:ms-0 flex items-center gap-1.5">
@@ -2518,7 +2518,7 @@ function MarkView({ id, sid }) {
             {sub.note && <p className="card p-4 text-sm"><span className="font-bold text-ags-navy">{t('mk.note')}:</span> <span dir="auto">{sub.note}</span></p>}
           </div>
 
-          <aside className="card p-5 space-y-5 lg:sticky lg:top-20" aria-label={t('mk.panel')}>
+          <aside className="card p-5 space-y-5 lg:sticky lg:top-24" aria-label={t('mk.panel')}>
             <div>
               <p className="label" id="mk-mark">{t('mk.mark', { n: a.points })}</p>
               {range ? (
@@ -3125,6 +3125,7 @@ export default function App() {
           <p className="text-ags-navy">{t('demo.reset.body')}</p>
         </Modal>
         <Modal open={modal === 'about'} onClose={() => setModal(null)} title={t('demo.about')} icon={Info} size="sm" footer={<button type="button" className="btn btn-primary" onClick={() => setModal(null)}>{t('close')}</button>}>
+          {AGS_LOGO && <img src={AGS_LOGO} alt={t('app.school')} className="h-20 w-auto mx-auto mb-4" />}
           <p className="text-ags-navy leading-relaxed">{t('demo.about.body')}</p>
           <p className="mt-4 text-sm text-ags-slate">{t('app.school')} · {t('app.city')}</p>
         </Modal>

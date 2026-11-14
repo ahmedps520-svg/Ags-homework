@@ -55,8 +55,9 @@ teaches Mathematics to 8B1–8B3. KG keeps female teachers.
 
 ## Logo
 
-Put the school’s official logo in `src/assets/` as `ags-logo.svg` (or `.png` / `.webp` / `.jpg`) and run
-`npm run build:single`. The header uses it automatically; until then it shows the school’s name as text.
+The official AGS logo (supplied by the school, outer circle removed, transparent background) is in
+`src/assets/ags-logo.webp`. To replace it, save a new file there as `ags-logo.svg` / `.png` / `.webp` / `.jpg`
+(keep only one) and run `npm run build:single`.
 
 ## What’s in it
 
