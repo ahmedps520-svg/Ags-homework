@@ -1,17 +1,20 @@
 # AGS Homework Hub — clickable demo
 
-A front-end demonstration of a homework platform for **Advanced Generations International Schools (AGS), Jeddah**.
-It shows the **Student**, **Teacher** and **Admin** experiences in **English and Arabic (full RTL)**.
+A front-end demonstration of a homework platform for **Advanced Generations International Schools (AGS), Jeddah**,
+in **English and Arabic (full right-to-left)**. It is built around three simple jobs:
 
-> **Demo only.** Every person, class, assignment, submission, grade and statistic is fictional and held in memory.
-> Autosave works within the session; refreshing the page restores the sample data. No accounts exist and no
-> messages or notifications are sent. The footer of every screen carries a “Demo — sample data” label.
+- **Students** see one list and hand in homework by taking a photo of their work.
+- **Teachers** set homework in three steps and mark it with ticks, a mark and a comment.
+- **Leadership** sees the whole school on one screen.
+
+> **Demo only.** Every person, class, homework, mark and figure is fictional and held in memory.
+> Work saves automatically within the session; refreshing the page brings back the sample data. No accounts exist
+> and no messages or notifications are sent. Every screen carries a “Demo — sample data” label.
 
 ## Open it
 
 **For a presentation (no setup):** open `presentation/AGS-Homework-Hub-Demo.html` in Chrome, Edge or Safari.
-It is one self-contained file and works offline. An internet connection is used only to load the
-Noto Kufi Arabic font; without one, the system font is used.
+It is one self-contained file and works offline (an internet connection only loads the Noto Kufi Arabic font).
 
 **For development:**
 
@@ -27,37 +30,41 @@ npm run dev
 npm run build:single
 ```
 
-`npm run build:single` regenerates the one-file version in `dist-single/index.html`. Copy it over
+`npm run build:single` regenerates the one-file version in `dist-single/index.html`; copy it over
 `presentation/AGS-Homework-Hub-Demo.html` after changes.
 
-## The 6-step demo (≈ 5 minutes)
+## The demo (about 4 minutes)
 
-A **Demo guide** panel (bottom corner) lists these steps, ticks them off as they happen, and has a **Go** button for each.
+Click **Demo steps** (bottom corner) to see the six steps; tap any step to jump straight there.
 
-1. **Teacher → Create.** Click the **Worksheet photo** template, type the title *Fractions Review*, keep class **8B**, check the due date, then **Publish**.
-2. **Student.** *Fractions Review* is at the top of **Due soon** (marked “New”). Open it → **Submit paper homework** → **Use a sample page** → pick *Handwritten fractions* → **Preview & submit** → **Submit assignment**.
-3. **Teacher.** Open the submission (guide step 3, or **Grading**). Draw with **Pen**, add **Ticks**, score the **Rubric**, tap a quick comment, then **Return**.
-4. **Student.** The assignment now shows the mark, rubric breakdown, comment and the teacher’s marks drawn on the photo.
-5. **Teacher → Class insights.** The *Fractions Review* completion bar has moved up.
-6. **Admin.** The school overview’s live activity feed shows the submission and the return; Ms. Sarah’s grading backlog has changed.
+1. **Teacher → Set homework.** Choose **Photo of written work**, type *Fractions Review*, keep **8B1** and **Tomorrow**, press **Send to 8B1**.
+2. **Student.** *Fractions Review* is at the top of **To do**. Open it → **No camera? Use a sample page** → pick a page → **Hand in**.
+3. **Teacher.** **Start marking** → tap the photo to add ticks → choose a mark → tap a quick comment → **Send back to Omar**.
+4. **Student.** The homework shows the mark, the comment and the teacher’s ticks on the photo.
+5. **Teacher → Progress.** *Fractions Review* now shows Omar’s hand-in.
+6. **Admin.** **Latest activity** shows the hand-in and the return as they happened.
 
-Tips: switch **EN / ع** at any time — the whole interface mirrors. Use **Design preview by age** (student view) to show
-the KG–Grade 3 and Grades 9–12 designs. **Reset demo** restores the sample data. On a phone, **Take photo** opens the camera.
+Switch **EN / ع** at any time. In the student view, **Design preview by age** shows the KG–Grade 3 and Grades 9–12
+designs. **Settings** (gear icon) has text size, reduce motion and **Reset demo**.
+
+## Classes
+
+Class codes follow the school’s own naming: boys’ sections **8B1, 8B2, 8B3**, girls’ sections **8G1, 8G2**,
+and KG sections with letters (**KG2-A**). The demo teacher, Ms. Sarah Hassan, teaches Mathematics to 8B1–8B3.
 
 ## What’s in it
 
-| Area | Highlights |
+| Who | What they can do |
 |---|---|
-| Student | Dashboard (due soon, calm late/overdue section, feedback, completed), subject filter, week strip, autosaving answers, review-before-submit, honest on-time/late confirmation, feedback with annotated pages, resubmission. |
-| Paper homework | Take photo (camera on phones), upload from gallery, or built-in sample pages; real rotate and crop, reorder, delete with undo, note to teacher, preview, submit. |
-| Teacher | Dashboard, Google-Forms-style builder (8 question types, templates, attachments, rubric, publish/schedule, late policy, resubmission, student preview), duplicate to another class, submissions table with filters and bulk actions, split-screen grading with pen / tick / cross / text / undo on a canvas, class insights (no student rankings). |
-| Admin | Completion by grade and subject, outstanding and late work, grading backlog and turnaround, students needing follow-up, assignment load per class per day with overloaded days highlighted. Grade 8 Mathematics and 8B update live from the session; other figures are fixed sample data. |
-| Ages | KG–Grade 3 (large illustrated cards, short sentences, star on submit), Grades 4–8 (balanced, progress bars), Grades 9–12 (compact and data-led). |
-| Accessibility | Status always shown as icon + text, visible focus rings, keyboard-operable controls, adjustable text size and reduced motion in Settings, table view for every chart. |
+| Student | One list: **To do**, **Late** (calm, with the late-work rule), **Returned with feedback**, finished work. One button per homework. Photos are taken or uploaded on the homework page itself (rotate or delete a page), answers save automatically, then **Hand in**. Feedback shows the mark, comment and the teacher’s marks on the photo; **Redo and hand in** when the teacher asks. |
+| Teacher | **Home**: what’s ready to mark, homework set with “18 of 24 handed in”, one-tap reminders. **Set homework**: photo of written work, quick quiz (marked automatically) or written answer → title → class and due date (Tomorrow / In 2 days / Next week). Late work, redo and send-later are under *More options*. **Marking**: tick / cross / pen on the photo, mark out of 10, comment with quick phrases, **Send back** moves straight to the next student. **Progress**: hand-in rate per homework and students who may need help (never a ranking). |
+| Admin | Homework handed in, work waiting to be marked, students to follow up, homework due per class each day with overloaded days highlighted, and live activity. Grade 8 boys’ Mathematics and 8B1 update live; other figures are fixed sample data. |
+| Ages | KG–Grade 3: large illustrated cards and very short sentences. Grades 4–8: balanced. Grades 9–12: compact. |
+| Accessibility | Status always shown as icon + text, visible focus rings, keyboard-operable controls, adjustable text size and reduced motion. |
 
 ## Code
 
-Everything lives in `src/App.jsx` (single file): brand tokens, the translations object (English and Arabic side by side),
-seed data, domain logic, then named components (`StudentDashboard`, `AssignmentPage`, `PaperUpload`, `AssignmentBuilder`,
-`SubmissionsTable`, `GradingView`, `ClassInsights`, `AdminOverview`, …). Built with React 18, Tailwind CSS 3 and lucide-react.
+Everything lives in `src/App.jsx` (single file): brand styles, the translations object (English and Arabic side by side),
+seed data, domain logic, then named components (`StudentHome`, `AssignmentPage`, `PhotoPages`, `TeacherHome`,
+`SetHomework`, `MarkView`, `Progress`, `AdminOverview`, …). Built with React 18, Tailwind CSS 3 and lucide-react.
 Hijri dates are generated with `Intl.DateTimeFormat` (Umm al-Qura calendar), never hard-coded.

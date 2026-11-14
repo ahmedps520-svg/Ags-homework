@@ -2,39 +2,29 @@
  * AGS Homework Hub — clickable front-end demo
  * Advanced Generations International Schools (AGS), Jeddah
  *
- * Single-file React app. Tailwind for layout utilities, lucide-react for icons.
+ * Designed to be simple: students see one list and hand in with a photo;
+ * teachers set homework in three steps and mark with ticks, a mark and a comment;
+ * leadership sees the whole school on one screen.
+ *
+ * Single-file React app. Tailwind for layout, lucide-react for icons.
  * Everything below is FICTIONAL SAMPLE DATA held in memory for this session only.
  * Nothing is persisted, no accounts exist and no notifications are sent.
  *
  * File map
- *   1. Brand tokens & global styles
- *   2. Translations (single object, EN + AR side by side)
- *   3. Formatting, time & small helpers
- *   4. Static entities (subjects, teachers, classes, students)
- *   5. Sample page images (inline SVG "photographs")
- *   6. Seed data (deterministic)
- *   7. Domain logic (statuses, scoring, statistics)
- *   8. App context & UI primitives
- *   9. Shell (top bar, sidebar, bottom nav, demo guide, settings)
- *  10. Student views
- *  11. Teacher views
- *  12. Admin view
- *  13. App root
+ *   1. Brand tokens & global styles      8. App context & UI primitives
+ *   2. Translations (EN + AR)            9. Shell (top bar, demo guide, settings)
+ *   3. Formatting, time & helpers       10. Student
+ *   4. Static entities (classes, people) 11. Teacher
+ *   5. Sample page images (inline SVG)  12. Admin
+ *   6. Seed data                        13. App root
+ *   7. Domain logic
  * ========================================================================== */
 
 import React, {
   useState, useEffect, useMemo, useRef, useCallback, createContext, useContext,
 } from 'react';
 import {
-  AlarmClock, AlertCircle, AlertTriangle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Atom,
-  BadgeCheck, BarChart3, Bell, BookMarked, BookOpen, Building2, Calculator, CalendarClock,
-  CalendarDays, Camera, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronRight, ChevronUp,
-  Circle, CircleDot, ClipboardList, Clock, Copy, Crop, Dna, Eye, FileText, FlaskConical,
-  Globe2, GraduationCap, Image as ImageIcon, Images, Info, Inbox, LayoutDashboard, Leaf, Link2,
-  ListChecks, Loader2, Lock, MessageSquareText, Monitor, Palette, Paperclip, PenLine, PencilLine,
-  Plus, PlusCircle, RotateCcw, RotateCw, Send, Settings, Shuffle, Sigma, Sparkles, Star, Table2,
-  ToggleLeft, Trash2, TrendingUp, Type, Undo2, Upload, Users, X, AlignLeft, CheckSquare, Megaphone,
-  Presentation, School,
+  AlarmClock, AlertCircle, AlertTriangle, AlignLeft, ArrowLeft, ArrowRight, Atom, BadgeCheck, BarChart3, Bell, BookMarked, BookOpen, Building2, CalendarClock, Camera, Check, CheckCheck, CheckCircle2, ChevronDown, Circle, CircleDot, ClipboardList, Clock, Dna, Eye, FileText, FlaskConical, Globe2, GraduationCap, Inbox, Info, LayoutDashboard, ListChecks, Loader2, Lock, MessageSquareText, Monitor, Palette, Paperclip, PenLine, PencilLine, Plus, PlusCircle, Presentation, RotateCcw, RotateCw, Send, Settings, Sigma, Sparkles, Star, Trash2, TrendingUp, Undo2, Upload, Users, X,
 } from 'lucide-react';
 
 /* ============================================================================
@@ -108,7 +98,7 @@ const GLOBAL_CSS = `
 `;
 
 /* ============================================================================
- * 2. TRANSLATIONS — one object, [English, Arabic] per key.
+ * 2. TRANSLATIONS — one object, [English, Arabic] per key. Plain words on purpose.
  * A value may be a plural object keyed by Intl.PluralRules categories
  * (Arabic uses zero/one/two/few/many/other). Keys ending in .early/.senior
  * are age-stage variants picked automatically by t.s().
@@ -124,34 +114,18 @@ const T = {
   'role.teacher': ['Teacher', 'معلّم'],
   'role.admin': ['Admin', 'الإدارة'],
   'lang.label': ['Language', 'اللغة'],
-  'lang.en': ['English', 'الإنجليزية'],
-  'lang.ar': ['Arabic', 'العربية'],
   'stage.label': ['Design preview by age', 'معاينة التصميم حسب العمر'],
-  'stage.hint': ['Preview only — not an account setting', 'للمعاينة فقط — ليس إعدادًا للحساب'],
   'stage.early': ['KG – Grade 3', 'رياض الأطفال – الصف الثالث'],
   'stage.middle': ['Grades 4 – 8', 'الصفوف الرابع – الثامن'],
   'stage.senior': ['Grades 9 – 12', 'الصفوف التاسع – الثاني عشر'],
   'stage.switched': ['Now previewing as {name} · {cls}', 'المعاينة الآن بصفة {name} · {cls}'],
-  'demo.reset': ['Reset demo', 'إعادة ضبط العرض'],
-  'demo.reset.title': ['Reset the demo?', 'إعادة ضبط العرض؟'],
-  'demo.reset.body': ['This restores all the sample data. Anything created during this session will be cleared.', 'سيؤدي ذلك إلى استعادة جميع البيانات التجريبية، وحذف كل ما أُنشئ خلال هذه الجلسة.'],
-  'demo.reset.done': ['Demo restored to its sample data', 'أُعيد العرض إلى بياناته التجريبية'],
-  'demo.footer': ['Demo — sample data', 'نسخة تجريبية — بيانات افتراضية'],
-  'demo.about': ['About this demo', 'عن هذا العرض'],
-  'demo.about.body': ['This is a front-end demonstration of AGS Homework Hub. All people, classes, assignments, submissions, grades and statistics are fictional and kept in memory for this session only. Autosave works within the session; refreshing the page restores the sample data. No real school accounts exist and no messages or notifications are sent.', 'هذا عرض تجريبي لواجهة منصة الواجبات في مدارس الأجيال المتقدمة العالمية. جميع الأشخاص والشعب والواجبات والتسليمات والدرجات والإحصاءات افتراضية، وتُحفظ في الذاكرة خلال هذه الجلسة فقط. يعمل الحفظ التلقائي داخل الجلسة، وتحديث الصفحة يعيد البيانات التجريبية. لا توجد حسابات مدرسية حقيقية، ولا تُرسَل أي رسائل أو إشعارات.'],
+  'nav.main': ['Main navigation', 'التنقل الرئيسي'],
   'skip': ['Skip to main content', 'الانتقال إلى المحتوى الرئيسي'],
   'close': ['Close', 'إغلاق'],
   'cancel': ['Cancel', 'إلغاء'],
-  'confirm': ['Confirm', 'تأكيد'],
-  'back': ['Back', 'رجوع'],
-  'open': ['Open', 'فتح'],
-  'show': ['Show', 'إظهار'],
-  'hide': ['Hide', 'إخفاء'],
-  'or': ['or', 'أو'],
-  'loading': ['Loading…', 'جارٍ التحميل…'],
   'dismiss': ['Dismiss', 'إغلاق'],
   'undo': ['Undo', 'تراجع'],
-  'menu': ['Menu', 'القائمة'],
+  'loading': ['Loading…', 'جارٍ التحميل…'],
   'settings': ['Settings', 'الإعدادات'],
   'settings.textSize': ['Text size', 'حجم الخط'],
   'settings.size.s': ['Small', 'صغير'],
@@ -159,269 +133,133 @@ const T = {
   'settings.size.l': ['Large', 'كبير'],
   'settings.size.xl': ['Extra large', 'كبير جدًا'],
   'settings.motion': ['Reduce motion', 'تقليل الحركة'],
-  'settings.motion.hint': ['Turns off animations and transitions', 'يوقف الرسوم المتحركة والانتقالات'],
-  'settings.guide': ['Show demo guide', 'إظهار دليل العرض'],
-  'settings.preview': ['Aa — The quick preview of your text size', 'أ ب — معاينة سريعة لحجم الخط'],
+  'settings.motion.hint': ['Turns off animations', 'يوقف الرسوم المتحركة'],
+  'settings.guide': ['Show demo steps', 'إظهار خطوات العرض'],
+  'demo.reset': ['Reset demo', 'إعادة ضبط العرض'],
+  'demo.reset.title': ['Reset the demo?', 'إعادة ضبط العرض؟'],
+  'demo.reset.body': ['This brings back all the sample data. Anything done in this session will be cleared.', 'سيعيد ذلك جميع البيانات التجريبية، ويحذف كل ما تم في هذه الجلسة.'],
+  'demo.reset.done': ['Demo reset to its sample data', 'أُعيد العرض إلى بياناته التجريبية'],
+  'demo.footer': ['Demo — sample data', 'نسخة تجريبية — بيانات افتراضية'],
+  'demo.about': ['About this demo', 'عن هذا العرض'],
+  'demo.about.body': ['This is a front-end demonstration of AGS Homework Hub. All people, classes, homework, marks and figures are fictional and kept in memory for this session only. Work saves automatically within the session; refreshing the page brings back the sample data. No real school accounts exist and no messages or notifications are sent.', 'هذا عرض تجريبي لواجهة منصة الواجبات في مدارس الأجيال المتقدمة العالمية. جميع الأسماء والشعب والواجبات والدرجات والأرقام افتراضية، وتُحفظ في الذاكرة خلال هذه الجلسة فقط. يُحفظ العمل تلقائيًا داخل الجلسة، وتحديث الصفحة يعيد البيانات التجريبية. لا توجد حسابات مدرسية حقيقية، ولا تُرسَل أي رسائل أو إشعارات.'],
 
-  /* --- navigation --- */
-  'nav.home': ['Home', 'الرئيسية'],
-  'nav.assignments': ['Assignments', 'الواجبات'],
-  'nav.dashboard': ['Dashboard', 'لوحة المعلّم'],
-  'nav.create': ['Create', 'إنشاء واجب'],
-  'nav.grading': ['Grading', 'التصحيح'],
-  'nav.insights': ['Class insights', 'مؤشرات الصفوف'],
-  'nav.overview': ['School overview', 'نظرة عامة'],
-  'nav.main': ['Main navigation', 'التنقل الرئيسي'],
+  /* --- demo steps --- */
+  'guide.title': ['Demo steps', 'خطوات العرض'],
+  'guide.hide': ['Hide demo steps', 'إخفاء خطوات العرض'],
+  'guide.done': ['Done', 'تم'],
+  'guide.progress': ['{n}/6', '{n} من ٦'],
+  'guide.hint': ['Tap a step to jump straight there.', 'انقر على أي خطوة للانتقال إليها مباشرة.'],
+  'guide.s1': ['Teacher: set “Fractions Review” for 8B1 (photo of written work)', 'المعلّم: أنشئ واجب «Fractions Review» لشعبة 8B1 (صورة لعمل مكتوب)'],
+  'guide.s2': ['Student: hand it in with a sample photo', 'الطالب: سلّمه بصورة نموذجية'],
+  'guide.s3': ['Teacher: mark it and send it back', 'المعلّم: صحّحه وأعده إلى الطالب'],
+  'guide.s4': ['Student: see the mark and comments', 'الطالب: اطّلع على الدرجة والملاحظات'],
+  'guide.s5': ['Teacher: Progress shows it handed in', 'المعلّم: يظهر التسليم في صفحة المتابعة'],
+  'guide.s6': ['Admin: the overview shows the new hand-in', 'الإدارة: يظهر التسليم الجديد في النظرة العامة'],
 
-  /* --- people & classes --- */
-  'cls.long': ['Grade {g}{s}', 'الصف {g} – الشعبة {s}'],
-  'who.teacherOf': ['{subject} teacher', 'معلّم {subject}'],
-
-  /* --- student dashboard --- */
-  'greet.morning': ['Good morning, {name}', 'صباح الخير، {name}'],
-  'greet.afternoon': ['Good afternoon, {name}', 'مساء الخير، {name}'],
-  'greet.evening': ['Good evening, {name}', 'مساء الخير، {name}'],
-  'greet.early': ['Hello, {name}!', 'أهلًا يا {name}!'],
-  'dash.dueWeek': ['Due this week', 'مطلوبة هذا الأسبوع'],
-  'dash.overdue': ['Overdue', 'فات موعد التسليم'],
-  'dash.submitted': ['Submitted', 'تم التسليم'],
-  'dash.returned': ['Returned with feedback', 'أُعيدت مع ملاحظات'],
-  'dash.dueWeek.early': ['To do', 'واجباتي'],
-  'dash.overdue.early': ['Still to hand in', 'لم أسلّمها بعد'],
-  'dash.submitted.early': ['Handed in', 'سلّمتها'],
-  'dash.returned.early': ['Teacher looked', 'راجعها المعلّم'],
-  'sec.dueSoon': ['Due soon', 'مواعيد تسليم قريبة'],
-  'sec.dueSoon.early': ['My homework', 'واجباتي'],
-  'sec.overdue': ['Late / Overdue', 'متأخرة / فات موعد تسليمها'],
-  'sec.overdue.early': ['Still to hand in', 'لم أسلّمها بعد'],
-  'sec.overdue.hint': ['You can still hand these in where your teacher accepts late work.', 'ما زال بإمكانك تسليم هذه الواجبات حيث يقبل المعلّم التسليم المتأخر.'],
-  'sec.returned': ['Returned with feedback', 'أُعيدت مع ملاحظات'],
-  'sec.returned.early': ['From my teacher', 'من معلّمي'],
-  'sec.completed': ['Completed', 'الواجبات المكتملة'],
-  'sec.completed.early': ['All done', 'أنجزتها'],
-  'sec.count': [{ one: '{n} item', other: '{n} items' }, { zero: 'لا عناصر', one: 'عنصر واحد', two: 'عنصران', few: '{n} عناصر', many: '{n} عنصرًا', other: '{n} عنصر' }],
-  'empty.dueSoon': ['Nothing due soon — you’re all caught up.', 'لا توجد واجبات قريبة — أنجزت كل شيء.'],
-  'empty.dueSoon.early': ['No homework right now.', 'لا توجد واجبات الآن.'],
-  'empty.returned': ['No new feedback yet.', 'لا توجد ملاحظات جديدة بعد.'],
-  'empty.completed': ['Completed work will appear here.', 'ستظهر الواجبات المكتملة هنا.'],
-  'empty.filter': ['Nothing for this filter.', 'لا شيء ضمن هذا التصفية.'],
-  'filter.subjects': ['Filter by subject', 'التصفية حسب المادة'],
-  'filter.all': ['All subjects', 'كل المواد'],
-  'week.title': ['This week', 'هذا الأسبوع'],
-  'week.next': ['Coming up', 'الأيام القادمة'],
-  'week.today': ['Today', 'اليوم'],
-  'week.weekend': ['Weekend', 'عطلة'],
-  'week.none': ['No homework due', 'لا واجبات مطلوبة'],
-  'week.count': [{ one: '1 due', other: '{n} due' }, { zero: 'لا واجبات', one: 'واجب واحد', two: 'واجبان', few: '{n} واجبات', many: '{n} واجبًا', other: '{n} واجب' }],
-  'week.filtered': ['Showing work due on {day}', 'عرض الواجبات المطلوبة يوم {day}'],
-  'week.clear': ['Show all days', 'عرض كل الأيام'],
-  'enc.allOnTime': ['You’ve submitted everything on time this week.', 'سلّمت جميع واجباتك في موعدها هذا الأسبوع.'],
-  'enc.allOnTime.early': ['All done for this week. Well done!', 'أنهيت واجبات هذا الأسبوع. أحسنت!'],
-  'enc.allOnTime.senior': ['All work for this week submitted on time.', 'سُلِّمت جميع أعمال هذا الأسبوع في موعدها.'],
-  'enc.left': [{ one: 'Nice progress — 1 assignment left this week.', other: 'Nice progress — {n} assignments left this week.' }, { one: 'تقدّم جميل — بقي واجب واحد هذا الأسبوع.', two: 'تقدّم جميل — بقي واجبان هذا الأسبوع.', few: 'تقدّم جميل — بقيت {n} واجبات هذا الأسبوع.', many: 'تقدّم جميل — بقي {n} واجبًا هذا الأسبوع.', other: 'تقدّم جميل — بقي {n} واجب هذا الأسبوع.' }],
-  'enc.left.early': [{ one: 'Just 1 more to do this week.', other: '{n} more to do this week.' }, { one: 'بقي واجب واحد هذا الأسبوع.', two: 'بقي واجبان هذا الأسبوع.', few: 'بقيت {n} واجبات هذا الأسبوع.', many: 'بقي {n} واجبًا هذا الأسبوع.', other: 'بقي {n} واجب هذا الأسبوع.' }],
-  'enc.left.senior': [{ one: '1 assignment outstanding this week. Next: {next}.', other: '{n} assignments outstanding this week. Next: {next}.' }, { one: 'واجب واحد متبقٍ هذا الأسبوع. التالي: {next}.', two: 'واجبان متبقيان هذا الأسبوع. التالي: {next}.', few: '{n} واجبات متبقية هذا الأسبوع. التالي: {next}.', many: '{n} واجبًا متبقيًا هذا الأسبوع. التالي: {next}.', other: '{n} واجب متبقٍ هذا الأسبوع. التالي: {next}.' }],
-  'enc.none': ['No homework set for this week yet.', 'لا توجد واجبات لهذا الأسبوع بعد.'],
-  'enc.progress': ['{done} of {total} done this week', 'أنجزت {done} من {total} هذا الأسبوع'],
-  'enc.overdueNote': ['One piece is overdue — you can still hand it in.', 'هناك واجب فات موعده — وما زال بإمكانك تسليمه.'],
-  'reminder.text': ['{teacher} sent a reminder: “{title}” is waiting for you.', 'تذكير من {teacher}: واجب «{title}» بانتظارك.'],
-  'reminder.open': ['Open assignment', 'فتح الواجب'],
-
-  /* --- due dates & lateness --- */
+  /* --- time --- */
   'due.today': ['Due today, {time}', 'التسليم اليوم، {time}'],
   'due.tomorrow': ['Due tomorrow, {time}', 'التسليم غدًا، {time}'],
   'due.weekday': ['Due {day}, {time}', 'التسليم يوم {day}، {time}'],
   'due.date': ['Due {date}, {time}', 'التسليم {date}، {time}'],
   'due.lessHour': ['Due in less than an hour', 'التسليم خلال أقل من ساعة'],
   'due.inHours': [{ one: 'Due in 1 hour', other: 'Due in {n} hours' }, { one: 'التسليم خلال ساعة', two: 'التسليم خلال ساعتين', few: 'التسليم خلال {n} ساعات', many: 'التسليم خلال {n} ساعة', other: 'التسليم خلال {n} ساعة' }],
-  'due.was': ['Was due {when}', 'كان موعد التسليم {when}'],
-  'due.early.today': ['Today', 'اليوم'],
   'due.early.tomorrow': ['Tomorrow', 'غدًا'],
-  'due.early.day': ['{day}', '{day}'],
   'late.days': [{ one: '1 day late', other: '{n} days late' }, { one: 'متأخر يومًا واحدًا', two: 'متأخر يومين', few: 'متأخر {n} أيام', many: 'متأخر {n} يومًا', other: 'متأخر {n} يوم' }],
-  'late.accept': ['Late submission accepted', 'يُسمح بالتسليم المتأخر'],
-  'late.acceptUntil': ['Late submissions accepted until {date}', 'يُسمح بالتسليم المتأخر حتى {date}'],
-  'late.closed': ['Late work isn’t accepted — please talk to your teacher', 'لا يُقبل التسليم المتأخر — يُرجى التحدث مع المعلّم'],
-  'late.deduct': ['{pct} deducted per day late', 'يُخصم {pct} عن كل يوم تأخير'],
-  'late.policy.accept': ['Late work is accepted and marked as late.', 'يُقبل التسليم المتأخر ويُسجَّل متأخرًا.'],
-  'late.policy.until': ['Late work is accepted until {date}.', 'يُقبل التسليم المتأخر حتى {date}.'],
-  'late.policy.none': ['Late work is not accepted after the due date.', 'لا يُقبل التسليم بعد الموعد المحدد.'],
-  'overdue.until': ['This is overdue. You can still submit until {date}.', 'فات موعد تسليم هذا الواجب، ويمكنك تسليمه حتى {date}.'],
-  'overdue.any': ['This is overdue. You can still submit it — it will be marked as late.', 'فات موعد تسليم هذا الواجب، ويمكنك تسليمه وسيُسجَّل متأخرًا.'],
-  'overdue.closed': ['This is overdue and submissions have closed. Please speak to your teacher — they can help you catch up.', 'فات موعد تسليم هذا الواجب وأُغلق التسليم. يُرجى التحدث مع المعلّم، فهو قادر على مساعدتك.'],
-  'pts': [{ one: '{n} point', other: '{n} points' }, { zero: '{n} درجة', one: 'درجة واحدة', two: 'درجتان', few: '{n} درجات', many: '{n} درجة', other: '{n} درجة' }],
   'ago.now': ['just now', 'الآن'],
   'ago.min': [{ one: '1 min ago', other: '{n} min ago' }, { one: 'قبل دقيقة', two: 'قبل دقيقتين', few: 'قبل {n} دقائق', many: 'قبل {n} دقيقة', other: 'قبل {n} دقيقة' }],
   'ago.hour': [{ one: '1 hour ago', other: '{n} hours ago' }, { one: 'قبل ساعة', two: 'قبل ساعتين', few: 'قبل {n} ساعات', many: 'قبل {n} ساعة', other: 'قبل {n} ساعة' }],
   'ago.day': [{ one: 'yesterday', other: '{n} days ago' }, { one: 'أمس', two: 'قبل يومين', few: 'قبل {n} أيام', many: 'قبل {n} يومًا', other: 'قبل {n} يوم' }],
-  'days': [{ one: '{n} day', other: '{n} days' }, { zero: '{n} يوم', one: 'يوم واحد', two: 'يومان', few: '{n} أيام', many: '{n} يومًا', other: '{n} يوم' }],
 
-  /* --- statuses (every status has icon + text) --- */
-  'st.notStarted': ['Not started', 'لم يبدأ'],
-  'st.draft': ['Draft', 'مسودة'],
-  'st.submitted': ['Submitted', 'تم التسليم'],
-  'st.submittedLate': ['Submitted late', 'سُلِّم متأخرًا'],
-  'st.overdue': ['Overdue', 'فات موعد التسليم'],
-  'st.closed': ['Not handed in', 'لم يُسلَّم'],
-  'st.returned': ['Returned', 'أُعيد مع ملاحظات'],
-  'st.revision': ['Returned for revision', 'أُعيد للتعديل'],
-  'st.completed': ['Completed', 'مكتمل'],
+  /* --- statuses (always icon + text) --- */
+  'st.notStarted': ['To do', 'مطلوب'],
+  'st.notYet': ['Not yet', 'لم يُسلَّم بعد'],
+  'st.draft': ['Started', 'قيد الإنجاز'],
+  'st.submitted': ['Handed in', 'تم التسليم'],
+  'st.submittedLate': ['Handed in late', 'سُلِّم متأخرًا'],
   'st.late': ['Late', 'متأخر'],
-  'st.missing': ['Missing', 'غير مُسلَّم'],
-  'st.graded': ['Graded', 'تم التقييم'],
-  'st.notYet': ['Not submitted yet', 'لم يُسلَّم بعد'],
+  'st.overdue': ['Overdue', 'فات موعد التسليم'],
+  'st.closed': ['Missed', 'لم يُسلَّم'],
+  'st.missing': ['Not handed in', 'لم يُسلَّم'],
+  'st.graded': ['Marked', 'تم التصحيح'],
+  'st.returned': ['Returned with feedback', 'أُعيدت مع ملاحظات'],
+  'st.revision': ['Needs a redo', 'مطلوب تعديله'],
+  'st.completed': ['Completed', 'مكتمل'],
   'st.scheduled': ['Scheduled', 'مجدول'],
   'st.open': ['Open', 'مفتوح'],
-  'st.past': ['Past due', 'انتهى موعده'],
+  'st.past': ['Closed', 'مغلق'],
 
-  /* --- submission types --- */
-  'type.paper': ['Paper homework', 'الواجب الورقي'],
-  'type.quiz': ['Quiz · auto-marked', 'اختبار قصير · تصحيح تلقائي'],
-  'type.file': ['File upload', 'رفع ملف'],
-  'type.online': ['Online answers', 'إجابات إلكترونية'],
+  /* --- student home --- */
+  'greet.morning': ['Good morning, {name}', 'صباح الخير، {name}'],
+  'greet.afternoon': ['Good afternoon, {name}', 'مساء الخير، {name}'],
+  'greet.evening': ['Good evening, {name}', 'مساء الخير، {name}'],
+  'greet.early': ['Hello, {name}!', 'أهلًا يا {name}!'],
+  'home.summary': [{ one: 'You have 1 assignment to do.', other: 'You have {n} assignments to do.' }, { one: 'لديك واجب واحد.', two: 'لديك واجبان.', few: 'لديك {n} واجبات.', many: 'لديك {n} واجبًا.', other: 'لديك {n} واجب.' }],
+  'home.summary.early': [{ one: 'You have 1 thing to do.', other: 'You have {n} things to do.' }, { one: 'لديك واجب واحد.', two: 'لديك واجبان.', few: 'لديك {n} واجبات.', many: 'لديك {n} واجبًا.', other: 'لديك {n} واجب.' }],
+  'home.summary.senior': [{ one: '1 assignment outstanding.', other: '{n} assignments outstanding.' }, { one: 'واجب واحد متبقٍ.', two: 'واجبان متبقيان.', few: '{n} واجبات متبقية.', many: '{n} واجبًا متبقيًا.', other: '{n} واجب متبقٍ.' }],
+  'home.allDone': ['You’re all done — everything is handed in.', 'أنجزت كل شيء، وسلّمت جميع واجباتك.'],
+  'home.allDone.early': ['All done! Well done.', 'أنهيت كل شيء! أحسنت.'],
+  'home.todo': ['To do', 'المطلوب'],
+  'home.todo.early': ['My homework', 'واجباتي'],
+  'home.nothing': ['Nothing to do right now.', 'لا توجد واجبات مطلوبة الآن.'],
+  'home.nothing.early': ['No homework right now!', 'لا توجد واجبات الآن!'],
+  'home.late': ['Late — you can still hand these in', 'متأخرة — ما زال بإمكانك تسليمها'],
+  'home.late.hint': ['Your teacher still accepts these. Hand them in when you can.', 'ما زال المعلّم يقبل هذه الواجبات، فسلّمها متى استطعت.'],
+  'home.feedback': ['Returned with feedback', 'أُعيدت مع ملاحظات'],
+  'home.feedback.early': ['From my teacher', 'من معلّمي'],
+  'home.noFeedback': ['No new feedback yet.', 'لا توجد ملاحظات جديدة بعد.'],
+  'home.showDone': ['Show finished work ({n})', 'عرض الواجبات المكتملة ({n})'],
+  'home.hideDone': ['Hide finished work', 'إخفاء الواجبات المكتملة'],
+  'reminder.text': ['{teacher} sent a reminder: “{title}” is waiting for you.', 'تذكير من {teacher}: واجب «{title}» بانتظارك.'],
+  'card.new': ['New', 'جديد'],
+  'card.wasDue': ['Was due {day}', 'كان موعد تسليمه {day}'],
+  'card.askTeacher': ['please talk to your teacher', 'تحدّث مع معلّمك'],
+  'card.lateUntil': ['you can hand it in until {day}', 'يمكنك تسليمه حتى {day}'],
+  'card.lateAny': ['you can still hand it in', 'ما زال بإمكانك تسليمه'],
+  'card.returned': ['Returned {when}', 'أُعيد {when}'],
+  'card.handedIn': ['Handed in {when}', 'سُلِّم {when}'],
+  'act.start': ['Start', 'ابدأ'],
+  'act.continue': ['Continue', 'أكمل'],
+  'act.late': ['Hand in late', 'سلّم متأخرًا'],
+  'act.open': ['Open', 'فتح'],
+  'act.feedback': ['See feedback', 'عرض الملاحظات'],
+  'act.redo': ['Redo and hand in', 'عدّل وأعد التسليم'],
+  'act.view': ['View', 'عرض'],
 
-  /* --- question types --- */
-  'q.mcq': ['Multiple choice', 'اختيار من متعدد'],
-  'q.checkbox': ['Checkboxes', 'إجابات متعددة'],
-  'q.short': ['Short answer', 'إجابة قصيرة'],
-  'q.long': ['Long answer', 'إجابة مطوّلة'],
-  'q.tf': ['True / False', 'صح أو خطأ'],
-  'q.match': ['Matching', 'مطابقة'],
-  'q.file': ['File upload', 'رفع ملف'],
-  'q.paper': ['Paper homework (photo)', 'الواجب الورقي (صورة)'],
+  /* --- homework page --- */
+  'back.home': ['My homework', 'واجباتي'],
+  'a.whatToDo': ['What to do', 'المطلوب'],
+  'a.openWorksheet': ['Open worksheet', 'فتح ورقة العمل'],
+  'a.autosave': ['Your work saves automatically', 'يُحفظ عملك تلقائيًا'],
+  'a.saved': ['Saved', 'تم الحفظ'],
+  'a.missing': [{ one: 'Please answer 1 more question first.', other: 'Please answer {n} more questions first.' }, { one: 'أجب عن سؤال واحد آخر أولًا.', two: 'أجب عن سؤالين آخرين أولًا.', few: 'أجب عن {n} أسئلة أخرى أولًا.', many: 'أجب عن {n} سؤالًا آخر أولًا.', other: 'أجب عن {n} سؤال آخر أولًا.' }],
+  'a.handedIn': ['Handed in {when}', 'سُلِّم {when}'],
+  'a.lateUntil': ['This is late. You can still hand it in until {day}.', 'تأخّر هذا الواجب، ويمكنك تسليمه حتى {day}.'],
+  'a.lateAny': ['This is late. You can still hand it in — it will be marked as late.', 'تأخّر هذا الواجب، ويمكنك تسليمه وسيُسجَّل متأخرًا.'],
+  'a.closed': ['The deadline has passed. Please talk to your teacher — they can help you catch up.', 'انتهى موعد التسليم. تحدّث مع معلّمك، فهو قادر على مساعدتك.'],
+  'a.notFound': ['This homework isn’t available.', 'هذا الواجب غير متاح.'],
+  'att.mockNote': ['Demo preview — sample files are illustrations only.', 'معاينة تجريبية — الملفات النموذجية للتوضيح فقط.'],
+  'submit': ['Hand in', 'تسليم الواجب'],
+  'resubmit': ['Hand in again', 'إعادة التسليم'],
+  'q.of': ['Question {n} of {total}', 'السؤال {n} من {total}'],
   'q.true': ['True', 'صح'],
   'q.false': ['False', 'خطأ'],
-  'q.number': ['Question {n}', 'السؤال {n}'],
-  'q.required': ['Required', 'مطلوب'],
-  'q.chooseOne': ['Choose one answer', 'اختر إجابة واحدة'],
-  'q.chooseMany': ['Choose all that apply', 'اختر كل الإجابات الصحيحة'],
   'q.typeHere': ['Type your answer', 'اكتب إجابتك'],
-  'q.matchHint': ['Choose the matching item for each row', 'اختر ما يطابق كل عنصر'],
-  'q.matchSelect': ['Choose…', 'اختر…'],
-  'q.words': [{ one: '1 word', other: '{n} words' }, { zero: 'لا كلمات', one: 'كلمة واحدة', two: 'كلمتان', few: '{n} كلمات', many: '{n} كلمة', other: '{n} كلمة' }],
-  'q.file.add': ['Add file', 'إضافة ملف'],
-  'q.file.hint': ['PDF, image or document', 'ملف PDF أو صورة أو مستند'],
-  'q.file.remove': ['Remove file', 'إزالة الملف'],
-  'q.paper.cta': ['Submit paper homework', 'تسليم واجب ورقي'],
-  'q.paper.ctaEdit': ['Edit pages', 'تعديل الصفحات'],
-  'q.paper.hint': ['Take a photo of your written work, or upload one from your gallery.', 'التقط صورة لعملك المكتوب، أو ارفعها من معرض الصور.'],
-  'q.paper.pages': [{ one: '1 page added', other: '{n} pages added' }, { one: 'أُضيفت صفحة واحدة', two: 'أُضيفت صفحتان', few: 'أُضيفت {n} صفحات', many: 'أُضيفت {n} صفحة', other: 'أُضيفت {n} صفحة' }],
-  'q.preview.paper': ['Students open the photo flow from here.', 'من هنا يفتح الطلاب خطوات تصوير الواجب.'],
-};
-Object.assign(T, {
-  /* --- assignment page --- */
-  'card.new': ['New', 'جديد'],
-  'enc.start': [{ one: '1 assignment due this week — start with the nearest deadline.', other: '{n} assignments due this week — start with the nearest deadline.' }, { one: 'واجب واحد مطلوب هذا الأسبوع — ابدأ بالأقرب موعدًا.', two: 'واجبان مطلوبان هذا الأسبوع — ابدأ بالأقرب موعدًا.', few: '{n} واجبات مطلوبة هذا الأسبوع — ابدأ بالأقرب موعدًا.', many: '{n} واجبًا مطلوبًا هذا الأسبوع — ابدأ بالأقرب موعدًا.', other: '{n} واجب مطلوب هذا الأسبوع — ابدأ بالأقرب موعدًا.' }],
-  'enc.start.early': [{ one: '1 thing to do this week.', other: '{n} things to do this week.' }, { one: 'لديك واجب واحد هذا الأسبوع.', two: 'لديك واجبان هذا الأسبوع.', few: 'لديك {n} واجبات هذا الأسبوع.', many: 'لديك {n} واجبًا هذا الأسبوع.', other: 'لديك {n} واجب هذا الأسبوع.' }],
-  'guide.next': ['next: step {n}', 'التالي: الخطوة {n}'],
-  'ad.noneDue': ['No deadlines have passed yet in this week.', 'لم يحن أي موعد تسليم بعد في هذا الأسبوع.'],
-  'ad.kpi.completion.hint': ['Deadlines passed this week', 'للمواعيد المنتهية هذا الأسبوع'],
-  'back.home': ['Back to my homework', 'العودة إلى واجباتي'],
-  'a.due': ['Due', 'موعد التسليم'],
-  'a.points': ['Points', 'الدرجة'],
-  'a.latePolicy': ['Late work', 'التسليم المتأخر'],
-  'a.type': ['Submission type', 'طريقة التسليم'],
-  'a.instructions': ['Instructions', 'التعليمات'],
-  'a.attachments': ['Attachments', 'المرفقات'],
-  'a.progress': ['{done} of {total} answered', 'أُجيب عن {done} من {total}'],
-  'a.saved': ['Draft saved · {when}', 'حُفظت المسودة · {when}'],
-  'a.saving': ['Saving…', 'جارٍ الحفظ…'],
-  'a.autosave': ['Your answers save automatically', 'تُحفظ إجاباتك تلقائيًا'],
-  'a.draftToast': ['Draft saved', 'حُفظت المسودة'],
-  'a.notFound': ['This assignment isn’t available.', 'هذا الواجب غير متاح.'],
-  'att.worksheet': ['Worksheet', 'ورقة عمل'],
-  'att.image': ['Image', 'صورة'],
-  'att.link': ['Link', 'رابط'],
-  'att.preview': ['Preview', 'معاينة'],
-  'att.openLink': ['Opens in a new tab', 'يُفتح في تبويب جديد'],
-  'att.mockNote': ['Demo preview — sample files are illustrations only.', 'معاينة تجريبية — الملفات النموذجية للتوضيح فقط.'],
-  'q.file.demo': ['files stay in this browser tab only', 'تبقى الملفات في هذه الصفحة فقط'],
-  'saveDraft': ['Save draft', 'حفظ كمسودة'],
-  'submit': ['Submit assignment', 'تسليم الواجب'],
-  'resubmit': ['Resubmit', 'إعادة التسليم'],
-  'resubmit.started': ['You can now edit your work and resubmit it.', 'يمكنك الآن تعديل عملك وإعادة تسليمه.'],
-  'review.title': ['Check your answers before you submit', 'راجع إجاباتك قبل التسليم'],
-  'review.noAnswer': ['No answer yet', 'لا توجد إجابة بعد'],
-  'review.edit': ['Edit answers', 'تعديل الإجابات'],
-  'review.confirm': ['Confirm and submit', 'تأكيد التسليم'],
-  'review.goto': ['Go to question', 'الانتقال إلى السؤال'],
-  'review.lateNote': ['This is after the due date, so it will be marked as late.', 'التسليم بعد الموعد المحدد، لذا سيُسجَّل متأخرًا.'],
-  'review.missing': [{ one: 'Answer the required question first (1 left).', other: 'Answer the required questions first ({n} left).' }, { one: 'أجب عن السؤال المطلوب أولًا (بقي سؤال واحد).', two: 'أجب عن الأسئلة المطلوبة أولًا (بقي سؤالان).', few: 'أجب عن الأسئلة المطلوبة أولًا (بقيت {n} أسئلة).', many: 'أجب عن الأسئلة المطلوبة أولًا (بقي {n} سؤالًا).', other: 'أجب عن الأسئلة المطلوبة أولًا (بقي {n} سؤال).' }],
-  'done.onTime': ['Submitted on time. Your teacher will review it soon.', 'تم التسليم في الموعد. سيراجعه معلّمك قريبًا.'],
-  'done.lateDays': [{ one: 'Submitted late — 1 day after the due date.', other: 'Submitted late — {n} days after the due date.' }, { one: 'تم التسليم متأخرًا — بعد الموعد المحدد بيوم واحد.', two: 'تم التسليم متأخرًا — بعد الموعد المحدد بيومين.', few: 'تم التسليم متأخرًا — بعد الموعد المحدد بـ{n} أيام.', many: 'تم التسليم متأخرًا — بعد الموعد المحدد بـ{n} يومًا.', other: 'تم التسليم متأخرًا — بعد الموعد المحدد بـ{n} يوم.' }],
-  'done.lateHelp': ['Thank you for handing it in. Your teacher will review it soon.', 'شكرًا لتسليمك. سيراجعه معلّمك قريبًا.'],
-  'done.early': ['All done! Your teacher will see your work.', 'أحسنت! سيرى معلّمك عملك.'],
-  'done.senior': ['Submitted {date} at {time}, before the deadline.', 'سُلِّم {date} الساعة {time} قبل الموعد النهائي.'],
-  'done.sub': ['“{title}” is with your teacher now.', 'واجب «{title}» لدى معلّمك الآن.'],
-  'done.pages': [{ one: '1 page was handed in.', other: '{n} pages were handed in.' }, { one: 'سُلِّمت صفحة واحدة.', two: 'سُلِّمت صفحتان.', few: 'سُلِّمت {n} صفحات.', many: 'سُلِّمت {n} صفحة.', other: 'سُلِّمت {n} صفحة.' }],
-  'done.view': ['View my submission', 'عرض ما سلّمته'],
-  'all.title': ['All assignments', 'جميع الواجبات'],
-  'all.subtitle': ['Everything set for you this term, in one place.', 'كل ما كُلِّفت به هذا الفصل في مكان واحد.'],
-  'all.tab.todo': ['To do', 'المطلوبة'],
-  'all.tab.submitted': ['Submitted', 'المُسلَّمة'],
-  'all.tab.returned': ['Returned', 'المُعادة'],
-  'all.tab.all': ['All', 'الكل'],
-
-  /* --- feedback --- */
-  'fb.title': ['Feedback from {teacher}', 'ملاحظات {teacher}'],
-  'fb.mark': ['Mark', 'الدرجة'],
-  'fb.rubric': ['Rubric', 'معايير التقييم'],
-  'fb.auto': ['Auto-marked questions', 'الأسئلة المصححة تلقائيًا'],
-  'fb.annotated': ['Your pages with your teacher’s notes', 'صفحاتك مع ملاحظات المعلّم'],
-  'fb.revision': ['Your teacher has asked you to revise this work and resubmit it.', 'طلب منك المعلّم تعديل هذا العمل وإعادة تسليمه.'],
-  'fb.correct': ['Correct', 'صحيحة'],
-  'fb.incorrect': ['Not quite', 'غير صحيحة'],
-  'fb.returnedOn': ['Returned {when}', 'أُعيد {when}'],
-  'fb.previous': ['Previous feedback', 'الملاحظات السابقة'],
-  'fb.yourAnswer': ['Your answer', 'إجابتك'],
-  'fb.correctAnswer': ['Correct answer', 'الإجابة الصحيحة'],
-  'fb.awaiting': ['Submitted {when}. Your teacher will review it soon.', 'سُلِّم {when}. سيراجعه معلّمك قريبًا.'],
-
-  /* --- paper homework flow --- */
-  'p.title': ['Submit paper homework', 'تسليم واجب ورقي'],
-  'p.backTo': ['Back to assignment', 'العودة إلى الواجب'],
-  'p.step1': ['Add pages', 'إضافة الصفحات'],
-  'p.step2': ['Check pages', 'مراجعة الصفحات'],
-  'p.step3': ['Submit', 'التسليم'],
-  'p.take': ['Take photo', 'التقاط صورة'],
-  'p.take.hint': ['Opens the camera on phones and tablets', 'يفتح الكاميرا على الجوال والجهاز اللوحي'],
-  'p.upload': ['Upload photo', 'رفع صورة'],
-  'p.upload.hint': ['Choose from your gallery or files', 'اختر من معرض الصور أو الملفات'],
-  'p.sample': ['Use a sample page', 'استخدام صفحة نموذجية'],
-  'p.sample.hint': ['Built-in pages for presenting without a camera', 'صفحات جاهزة للعرض دون كاميرا'],
-  'p.sample.pick': ['Choose a sample page', 'اختر صفحة نموذجية'],
-  'p.processing': ['Preparing image…', 'جارٍ تجهيز الصورة…'],
-  'p.tips': ['Tips for a clear photo', 'نصائح لصورة واضحة'],
-  'p.tip1': ['Lay the page flat in good light', 'ضع الورقة على سطح مستوٍ في إضاءة جيدة'],
-  'p.tip2': ['Fit all four corners in the frame', 'اجعل زوايا الورقة الأربع داخل الإطار'],
-  'p.tip3': ['One photo per page — you can add more', 'صورة لكل صفحة، ويمكنك إضافة المزيد'],
-  'p.page': ['Page {n}', 'الصفحة {n}'],
-  'p.pageOf': ['Page {n} of {total}', 'الصفحة {n} من {total}'],
-  'p.pages': ['Pages', 'الصفحات'],
-  'p.add': ['Add another page', 'إضافة صفحة أخرى'],
-  'p.rotate': ['Rotate 90°', 'تدوير ٩٠°'],
-  'p.crop': ['Crop', 'قصّ'],
-  'p.delete': ['Delete', 'حذف'],
-  'p.cropTrim': ['Trim edges', 'قصّ الحواف'],
-  'p.cropTop': ['Top half', 'النصف العلوي'],
-  'p.cropBottom': ['Bottom half', 'النصف السفلي'],
-  'p.cropReset': ['Whole page', 'الصفحة كاملة'],
-  'p.cropApply': ['Apply crop', 'تطبيق القصّ'],
-  'p.cropHint': ['Drag the corners or the box to choose the area to keep.', 'اسحب الزوايا أو الإطار لتحديد الجزء الذي تريد إبقاءه.'],
-  'p.cropHandle': ['Crop corner — use arrow keys to adjust', 'زاوية القصّ — استخدم مفاتيح الأسهم للتعديل'],
-  'p.cropped': ['Page cropped', 'قُصّت الصفحة'],
-  'p.moveUp': ['Move page earlier', 'تقديم الصفحة'],
-  'p.moveDown': ['Move page later', 'تأخير الصفحة'],
-  'p.deleted': ['Page deleted', 'حُذفت الصفحة'],
-  'p.note': ['Note to teacher (optional)', 'ملاحظة للمعلّم (اختياري)'],
-  'p.notePh': ['e.g. I wasn’t sure about question 4.', 'مثال: لم أكن متأكدًا من السؤال الرابع.'],
-  'p.previewSubmit': ['Preview & submit', 'معاينة وتسليم'],
-  'p.attach': ['Attach pages to assignment', 'إرفاق الصفحات بالواجب'],
-  'p.reviewTitle': ['Check your pages', 'راجع صفحاتك'],
-  'p.backEdit': ['Back to pages', 'العودة إلى الصفحات'],
-  'p.locked': ['This work has already been handed in.', 'سُلِّم هذا العمل بالفعل.'],
-  'p.err.type': ['That file isn’t an image. Please choose a photo.', 'هذا الملف ليس صورة. يُرجى اختيار صورة.'],
-  'p.err.load': ['We couldn’t open that image. Try another photo or use a sample page.', 'تعذّر فتح هذه الصورة. جرّب صورة أخرى أو استخدم صفحة نموذجية.'],
+  'q.choose': ['Choose…', 'اختر…'],
+  'q.addFile': ['Add file', 'إضافة ملف'],
+  'q.needed': ['This is needed before you hand in.', 'هذا مطلوب قبل التسليم.'],
+  'photo.title': ['Your photos', 'صور عملك'],
+  'photo.take': ['Take photo', 'التقاط صورة'],
+  'photo.upload': ['Upload photo', 'رفع صورة'],
+  'photo.tip': ['Tip: lay the page flat in good light.', 'نصيحة: ضع الورقة على سطح مستوٍ في إضاءة جيدة.'],
+  'photo.sample': ['No camera? Use a sample page', 'لا توجد كاميرا؟ استخدم صفحة نموذجية'],
+  'photo.busy': ['Preparing photo…', 'جارٍ تجهيز الصورة…'],
+  'photo.count': [{ one: '1 photo', other: '{n} photos' }, { one: 'صورة واحدة', two: 'صورتان', few: '{n} صور', many: '{n} صورة', other: '{n} صورة' }],
+  'photo.page': ['Page {n}', 'الصفحة {n}'],
+  'photo.rotate': ['Rotate', 'تدوير'],
+  'photo.delete': ['Delete', 'حذف'],
+  'photo.deleted': ['Photo deleted', 'حُذفت الصورة'],
+  'photo.err': ['We couldn’t open that photo. Try another one.', 'تعذّر فتح الصورة. جرّب صورة أخرى.'],
+  'photo.notImage': ['That file isn’t a photo.', 'هذا الملف ليس صورة.'],
   'sample.fractions': ['Handwritten fractions', 'كسور بخط اليد'],
   'sample.equations': ['Handwritten equations', 'معادلات بخط اليد'],
   'sample.textbook': ['Textbook exercise', 'تمرين من الكتاب'],
@@ -429,292 +267,180 @@ Object.assign(T, {
   'sample.letters': ['Letter practice', 'تدريب على الحروف'],
   'sample.calculus': ['Differentiation working', 'حلول التفاضل'],
   'sample.pattern': ['Geometric pattern', 'زخرفة هندسية'],
-
-  /* --- teacher dashboard & lists --- */
-  'td.greeting': ['Welcome back, {name}', 'مرحبًا بعودتك، {name}'],
-  'td.new': ['New assignment', 'واجب جديد'],
-  'td.active': ['Assignments active', 'الواجبات النشطة'],
-  'td.toGrade': ['Submissions to grade', 'تسليمات بانتظار التصحيح'],
-  'td.missing': ['Missing work', 'أعمال غير مُسلَّمة'],
-  'td.completion': ['Class completion rate', 'نسبة الإنجاز في الشعب'],
-  'td.window': ['Last 6 weeks, including open work', 'آخر ٦ أسابيع، بما فيها الواجبات المفتوحة'],
-  'td.attention': ['Needs your attention', 'بحاجة إلى متابعتك'],
-  'td.att.waiting': [{ one: '1 submission waiting in {cls} — {title}', other: '{n} submissions waiting in {cls} — {title}' }, { one: 'تسليم واحد بانتظار التصحيح في {cls} — {title}', two: 'تسليمان بانتظار التصحيح في {cls} — {title}', few: '{n} تسليمات بانتظار التصحيح في {cls} — {title}', many: '{n} تسليمًا بانتظار التصحيح في {cls} — {title}', other: '{n} تسليم بانتظار التصحيح في {cls} — {title}' }],
-  'td.att.graded': [{ one: '1 graded but not yet returned in {cls} — {title}', other: '{n} graded but not yet returned in {cls} — {title}' }, { one: 'عمل واحد قُيِّم ولم يُعَد بعد في {cls} — {title}', two: 'عملان قُيِّما ولم يُعادا بعد في {cls} — {title}', few: '{n} أعمال قُيِّمت ولم تُعَد بعد في {cls} — {title}', many: '{n} عملًا قُيِّم ولم يُعَد بعد في {cls} — {title}', other: '{n} عمل قُيِّم ولم يُعَد بعد في {cls} — {title}' }],
-  'td.att.missing': [{ one: '1 student hasn’t handed in {title} ({cls})', other: '{n} students haven’t handed in {title} ({cls})' }, { one: 'طالب واحد لم يسلّم {title} ({cls})', two: 'طالبان لم يسلّما {title} ({cls})', few: '{n} طلاب لم يسلّموا {title} ({cls})', many: '{n} طالبًا لم يسلّموا {title} ({cls})', other: '{n} طالب لم يسلّموا {title} ({cls})' }],
-  'td.att.none': ['All caught up — nothing needs your attention right now.', 'لا توجد مهام عاجلة الآن.'],
-  'td.upcoming': ['Upcoming deadlines', 'مواعيد التسليم القادمة'],
-  'td.noUpcoming': ['No upcoming deadlines.', 'لا توجد مواعيد تسليم قادمة.'],
-  'td.handedIn': ['{n}/{total} handed in', 'سُلِّم {n} من {total}'],
-  'ta.title': ['Assignments', 'الواجبات'],
-  'ta.subtitle': ['Your Mathematics assignments for 8A, 8B and 8C', 'واجبات الرياضيات للشعب أ وب وج في الصف الثامن'],
-  'ta.open': ['Open', 'مفتوحة'],
-  'ta.scheduled': ['Scheduled', 'مجدولة'],
-  'ta.past': ['Past', 'سابقة'],
-  'ta.preview': ['Student preview', 'معاينة الطالب'],
-  'ta.duplicate': ['Duplicate', 'نسخ'],
-  'ta.publishes': ['Publishes {when}', 'يُنشر {when}'],
-  'ta.toGrade': ['{n} to grade', 'للتصحيح: {n}'],
-  'ta.actions': ['Actions', 'الإجراءات'],
-  'dup.title': ['Duplicate to another class', 'نسخ إلى شعبة أخرى'],
-  'dup.classes': ['Assign to', 'إسناد إلى'],
-  'dup.due': ['New due date', 'موعد التسليم الجديد'],
-  'dup.do': ['Duplicate assignment', 'نسخ الواجب'],
-  'dup.done': ['Copied to {cls} — due {date}', 'نُسخ إلى {cls} — موعد التسليم {date}'],
-
-  /* --- builder --- */
-  'b.title': ['Create assignment', 'إنشاء واجب'],
-  'b.subtitle': ['Pick a template or build from scratch — students see it as soon as you publish.', 'اختر قالبًا أو ابدأ من الصفر، ويراه الطلاب فور النشر.'],
-  'b.templates': ['Start from a template', 'ابدأ من قالب'],
-  'tpl.worksheet': ['Worksheet photo', 'صورة ورقة عمل'],
-  'tpl.worksheet.d': ['Students photograph their written work', 'يصوّر الطلاب أعمالهم المكتوبة'],
-  'tpl.quiz': ['Quiz (auto-marked)', 'اختبار قصير (تصحيح تلقائي)'],
-  'tpl.quiz.d': ['Multiple choice and true/false, marked instantly', 'اختيار من متعدد وصح أو خطأ، يُصحَّح فورًا'],
-  'tpl.reading': ['Reading response', 'استجابة قرائية'],
-  'tpl.reading.d': ['Short and long answers about a text', 'إجابات قصيرة ومطوّلة عن نص'],
-  'tpl.project': ['Project', 'مشروع'],
-  'tpl.project.d': ['File upload with a reflection', 'رفع ملف مع تأمّل ذاتي'],
-  'tpl.applied': ['Template applied — add a title and check the settings.', 'طُبِّق القالب — أضف عنوانًا وراجع الإعدادات.'],
-  'b.details': ['Details', 'التفاصيل'],
-  'b.fTitle': ['Title', 'العنوان'],
-  'b.fTitlePh': ['e.g. Fractions Review', 'مثال: مراجعة الكسور'],
-  'b.fInstr': ['Instructions', 'التعليمات'],
-  'b.fInstrPh': ['What should students do?', 'ما المطلوب من الطلاب؟'],
-  'b.subject': ['Subject', 'المادة'],
-  'b.classes': ['Classes', 'الشعب'],
-  'b.questions': ['Questions', 'الأسئلة'],
-  'b.total': ['Total', 'المجموع'],
-  'b.addQ': ['Add question', 'إضافة سؤال'],
-  'b.empty': ['No questions yet. Use “Add question” to build the assignment.', 'لا توجد أسئلة بعد. استخدم «إضافة سؤال» لبناء الواجب.'],
-  'b.prompt': ['Question', 'السؤال'],
-  'b.promptPh': ['Type the question or task', 'اكتب السؤال أو المهمة'],
-  'b.option': ['Option {n}', 'الخيار {n}'],
-  'b.addOption': ['Add option', 'إضافة خيار'],
-  'b.removeOption': ['Remove option', 'حذف الخيار'],
-  'b.correct': ['Correct answer', 'الإجابة الصحيحة'],
-  'b.correctOne': ['Select the correct answer', 'حدّد الإجابة الصحيحة'],
-  'b.correctMany': ['Tick every correct answer', 'حدّد كل الإجابات الصحيحة'],
-  'b.markCorrect': ['Mark as correct', 'تحديد كإجابة صحيحة'],
-  'b.pairLeft': ['Item', 'العنصر'],
-  'b.pairRight': ['Its match', 'ما يطابقه'],
-  'b.addPair': ['Add pair', 'إضافة زوج'],
-  'b.removePair': ['Remove pair', 'حذف الزوج'],
-  'b.studentAnswers': ['Students type their answer here', 'يكتب الطلاب إجاباتهم هنا'],
-  'b.fileInfo': ['Students attach a file — a document, image or PDF.', 'يرفق الطلاب ملفًا: مستندًا أو صورة أو PDF.'],
-  'b.paperInfo': ['Students take or upload photos of their written pages. You can annotate them when grading.', 'يلتقط الطلاب صورًا لصفحاتهم المكتوبة أو يرفعونها، ويمكنك التعليق عليها أثناء التصحيح.'],
-  'b.autoMarked': ['Auto-marked', 'تصحيح تلقائي'],
-  'b.teacherMarked': ['Marked by you', 'تصحيح المعلّم'],
-  'b.pts': ['Points', 'الدرجة'],
-  'b.required': ['Required', 'مطلوب'],
-  'b.duplicate': ['Duplicate', 'تكرار'],
-  'b.delete': ['Delete', 'حذف'],
-  'b.moveUp': ['Move up', 'نقل لأعلى'],
-  'b.moveDown': ['Move down', 'نقل لأسفل'],
-  'b.att.worksheet': ['Worksheet (PDF)', 'ورقة عمل (PDF)'],
-  'b.att.worksheetName': ['Worksheet', 'ورقة العمل'],
-  'b.att.image': ['Image', 'صورة'],
-  'b.att.link': ['Add link', 'إضافة رابط'],
-  'b.att.linkPh': ['Paste a link, e.g. a video or website', 'الصق رابطًا، مثل مقطع فيديو أو موقع'],
-  'b.att.mock': ['Demo: a sample worksheet is attached — no real file is uploaded.', 'للعرض: أُرفقت ورقة عمل نموذجية ولا يُرفع أي ملف فعلي.'],
-  'b.rubric': ['Rubric', 'معايير التقييم'],
-  'b.rubric.hint': ['Choose criteria — the {n} points you mark yourself are split between them.', 'اختر المعايير، وتتوزع عليها الدرجات التي تصححها بنفسك ({n}).'],
-  'b.rubric.add': ['Add', 'إضافة'],
-  'b.rubric.none': ['Every question is auto-marked, so no rubric is needed.', 'جميع الأسئلة تُصحَّح تلقائيًا، فلا حاجة إلى معايير تقييم.'],
-  'b.rubric.empty': ['Add questions first — the rubric covers the parts you mark yourself.', 'أضف الأسئلة أولًا، فمعايير التقييم تشمل الأجزاء التي تصححها بنفسك.'],
-  'rub.method': ['Method', 'طريقة الحل'],
-  'rub.accuracy': ['Accuracy', 'الدقة'],
-  'rub.presentation': ['Presentation', 'العرض والتنظيم'],
-  'rub.understanding': ['Understanding', 'الفهم'],
-  'rub.evidence': ['Use of evidence', 'توظيف الشواهد'],
-  'rub.language': ['Language', 'اللغة'],
-  'rub.content': ['Content', 'المحتوى'],
-  'rub.research': ['Research', 'البحث'],
-  'rub.creativity': ['Creativity', 'الإبداع'],
-  'rub.customPh': ['Add your own criterion', 'أضف معيارًا خاصًا بك'],
-  'b.settings': ['Settings', 'الإعدادات'],
-  'b.publish': ['Publishing', 'النشر'],
-  'b.pubNow': ['Publish now', 'النشر الآن'],
-  'b.pubSchedule': ['Schedule', 'جدولة'],
-  'b.pubAt': ['Publish on', 'موعد النشر'],
-  'b.due': ['Due date & time', 'تاريخ التسليم ووقته'],
-  'b.dueDate': ['Due date', 'تاريخ التسليم'],
-  'b.dueTime': ['Time', 'الوقت'],
-  'b.late': ['Late work', 'التسليم المتأخر'],
-  'b.late.accept': ['Accept and mark as late', 'قبوله مع تسجيله متأخرًا'],
-  'b.late.until': ['Accept until a set date', 'قبوله حتى تاريخ محدد'],
-  'b.late.none': ['Don’t accept', 'عدم القبول'],
-  'b.late.default': ['Default', 'افتراضي'],
-  'b.late.untilDate': ['Accept late work until', 'قبول التسليم المتأخر حتى'],
-  'b.deduct': ['Deduct a percentage per day late', 'خصم نسبة عن كل يوم تأخير'],
-  'b.deduct.hint': ['Off by default — follow the school’s assessment policy.', 'غير مفعّل افتراضيًا — اتبع سياسة التقييم في المدرسة.'],
-  'b.deduct.pct': ['% per day', '٪ عن كل يوم'],
-  'b.resubmit': ['Allow resubmission', 'السماح بإعادة التسليم'],
-  'b.resubmit.hint': ['Students can hand in again after feedback', 'يمكن للطلاب التسليم مجددًا بعد الملاحظات'],
-  'b.studentsSee': ['Students will see', 'سيرى الطلاب'],
-  'b.preview': ['Student preview', 'معاينة الطالب'],
-  'b.editMode': ['Edit', 'تحرير'],
-  'b.previewBanner': ['This is exactly what students will see. Answers typed here are not saved.', 'هذا ما سيراه الطلاب تمامًا، ولا تُحفظ الإجابات المكتوبة هنا.'],
-  'b.publishBtn': ['Publish', 'نشر'],
-  'b.scheduleBtn': ['Schedule', 'جدولة'],
-  'b.published': ['Published to {cls}. Students can see it now.', 'نُشر الواجب لـ{cls}، ويمكن للطلاب رؤيته الآن.'],
-  'b.scheduled': ['Scheduled — it will appear for students {when}.', 'جُدول النشر، وسيظهر للطلاب {when}.'],
-  'b.viewAsStudent': ['View as student', 'العرض بصفة طالب'],
-  'b.discard': ['Clear form', 'مسح النموذج'],
-  'b.draftKept': ['Your draft is kept while you switch views.', 'تُحفظ مسودتك أثناء التنقل بين الصفحات.'],
-  'b.err.title': ['Add a title.', 'أضف عنوانًا.'],
-  'b.err.classes': ['Choose at least one class.', 'اختر شعبة واحدة على الأقل.'],
-  'b.err.blocks': ['Add at least one question.', 'أضف سؤالًا واحدًا على الأقل.'],
-  'b.err.due': ['Choose a due date in the future, after publishing.', 'اختر موعد تسليم في المستقبل وبعد موعد النشر.'],
-  'b.err.publish': ['Choose a publishing time in the future.', 'اختر موعد نشر في المستقبل.'],
-  'b.err.prompt': ['Some questions are missing text, options or a correct answer.', 'بعض الأسئلة ينقصها نص أو خيارات أو إجابة صحيحة.'],
-  'b.err.fix': ['Please fix the highlighted items before publishing.', 'يُرجى تصحيح العناصر المحددة قبل النشر.'],
-
-  /* --- submissions & grading --- */
-  'sub.title': ['Submissions', 'التسليمات'],
-  'sub.queue': ['Grading', 'التصحيح'],
-  'sub.queue.hint': ['Work waiting for you, most urgent first', 'الأعمال التي بانتظارك، الأكثر إلحاحًا أولًا'],
-  'sub.allAssignments': ['All assignments', 'جميع الواجبات'],
-  'sub.filter': ['Filter by status', 'التصفية حسب الحالة'],
-  'sub.all': ['All', 'الكل'],
-  'sub.toGrade': ['To grade', 'بانتظار التصحيح'],
-  'sub.student': ['Student', 'الطالب'],
-  'sub.status': ['Status', 'الحالة'],
-  'sub.time': ['Submitted', 'وقت التسليم'],
-  'sub.mark': ['Mark', 'الدرجة'],
-  'sub.handedIn': ['Handed in', 'المُسلَّم'],
-  'sub.grade': ['Grade', 'تصحيح'],
-  'sub.view': ['View', 'عرض'],
-  'sub.remind': ['Remind missing students', 'تذكير من لم يسلّم'],
-  'sub.remindOne': ['Remind', 'تذكير'],
-  'sub.returnAll': ['Return all graded', 'إعادة جميع المُقيَّمة'],
-  'sub.reminded': [{ one: 'Reminder added to 1 student’s dashboard (demo — no message is sent).', other: 'Reminder added to {n} students’ dashboards (demo — no messages are sent).' }, { one: 'أُضيف تذكير إلى لوحة طالب واحد (للعرض فقط — لا تُرسَل رسائل).', two: 'أُضيف تذكير إلى لوحتي طالبين (للعرض فقط — لا تُرسَل رسائل).', few: 'أُضيف تذكير إلى لوحات {n} طلاب (للعرض فقط — لا تُرسَل رسائل).', many: 'أُضيف تذكير إلى لوحات {n} طالبًا (للعرض فقط — لا تُرسَل رسائل).', other: 'أُضيف تذكير إلى لوحات {n} طالب (للعرض فقط — لا تُرسَل رسائل).' }],
-  'sub.returnedAll': [{ one: '1 graded submission returned.', other: '{n} graded submissions returned.' }, { one: 'أُعيد تسليم واحد مُقيَّم.', two: 'أُعيد تسليمان مُقيَّمان.', few: 'أُعيدت {n} تسليمات مُقيَّمة.', many: 'أُعيد {n} تسليمًا مُقيَّمًا.', other: 'أُعيد {n} تسليم مُقيَّم.' }],
-  'sub.noneGraded': ['No graded work is waiting to be returned.', 'لا توجد أعمال مُقيَّمة بانتظار الإعادة.'],
-  'sub.noneToRemind': ['Everyone has handed this in.', 'سلّم الجميع هذا الواجب.'],
-  'sub.empty': ['No students match this filter.', 'لا يوجد طلاب ضمن هذه التصفية.'],
-  'g.tools': ['Annotation tools', 'أدوات التعليق'],
-  'g.pen': ['Pen', 'قلم'],
-  'g.tick': ['Tick', 'علامة صح'],
-  'g.cross': ['Cross', 'علامة خطأ'],
+  'fb.mark': ['Mark', 'الدرجة'],
+  'fb.from': ['From {teacher}', 'ملاحظات {teacher}'],
+  'fb.redo': ['Your teacher asked you to fix a few things and hand it in again.', 'طلب منك المعلّم تعديل بعض الأمور وإعادة التسليم.'],
+  'fb.redoStarted': ['You can now change your work and hand it in again.', 'يمكنك الآن تعديل عملك وإعادة تسليمه.'],
+  'fb.onPhotos': ['Your teacher’s marks on your work', 'ملاحظات المعلّم على عملك'],
+  'fb.correct': ['Correct', 'صحيحة'],
+  'fb.wrong': ['Not quite', 'غير صحيحة'],
+  'fb.correctAnswer': ['Correct answer', 'الإجابة الصحيحة'],
+  'fb.yourAnswer': ['Your answer', 'إجابتك'],
+  'done.onTime': ['Handed in on time.', 'تم التسليم في الموعد.'],
+  'done.late': [{ one: 'Handed in — 1 day after the due date.', other: 'Handed in — {n} days after the due date.' }, { one: 'تم التسليم بعد الموعد المحدد بيوم واحد.', two: 'تم التسليم بعد الموعد المحدد بيومين.', few: 'تم التسليم بعد الموعد المحدد بـ{n} أيام.', many: 'تم التسليم بعد الموعد المحدد بـ{n} يومًا.', other: 'تم التسليم بعد الموعد المحدد بـ{n} يوم.' }],
+  'done.early': ['All done! Your teacher will see your work.', 'أحسنت! سيرى معلّمك عملك.'],
+  'done.next': ['{teacher} will check it and send it back with feedback.', 'ستصلك ملاحظات {teacher} بعد المراجعة.'],
   'g.text': ['Text note', 'ملاحظة نصية'],
-  'g.undo': ['Undo', 'تراجع'],
   'g.textPh': ['Type a note, then press Enter', 'اكتب ملاحظة ثم اضغط Enter'],
-  'g.annotHint': ['Choose a tool, then mark the page', 'اختر أداة ثم علّق على الصفحة'],
-  'g.pages': ['Photographed pages', 'الصفحات المصوّرة'],
-  'g.answers': ['Student’s answers', 'إجابات الطالب'],
-  'g.noteFromStudent': ['Note from the student', 'ملاحظة الطالب'],
-  'g.panel': ['Marking', 'التقييم'],
-  'g.auto': ['Auto-marked score', 'الدرجة التلقائية'],
-  'g.rubric': ['Rubric', 'معايير التقييم'],
-  'g.final': ['Final mark', 'الدرجة النهائية'],
-  'g.useSuggested': ['Use calculated', 'استخدام المحسوبة'],
-  'g.breakdown': ['Auto-marked {auto} + rubric {rub}', 'التلقائية {auto} + المعايير {rub}'],
-  'g.deductSuggest': ['Late-work policy: −{pct} → suggested mark {mark}', 'سياسة التأخير: خصم {pct} ← الدرجة المقترحة {mark}'],
-  'g.comment': ['Comment to the student (private)', 'تعليق للطالب (خاص)'],
-  'g.commentPh': ['Write feedback for the student…', 'اكتب ملاحظاتك للطالب…'],
-  'g.quick': ['Quick comments', 'تعليقات سريعة'],
-  'qc.working': ['Clear working shown', 'خطوات الحل واضحة'],
+
+  /* --- teacher --- */
+  'tt.home': ['Home', 'الرئيسية'],
+  'tt.create': ['Set homework', 'إنشاء واجب'],
+  'tt.progress': ['Progress', 'المتابعة'],
+  'th.set': ['Set homework', 'إنشاء واجب'],
+  'th.toMark': ['Ready to mark', 'جاهز للتصحيح'],
+  'th.nToMark': ['{n} to mark', 'للتصحيح: {n}'],
+  'th.startMarking': ['Start marking', 'ابدأ التصحيح'],
+  'th.allMarked': ['All marked — nothing is waiting.', 'لا توجد أعمال بانتظار التصحيح.'],
+  'th.yours': ['Homework you set', 'الواجبات التي أرسلتها'],
+  'th.handedIn': ['{n} of {total} handed in', 'سلّم {n} من {total}'],
+  'th.seeClass': ['See class', 'عرض الشعبة'],
+  'th.remind': ['Remind ({n})', 'تذكير ({n})'],
+  'th.sendsOn': ['Sends {when}', 'يُرسل {when}'],
+  'th.help': [{ one: '1 student may need help — see Progress', other: '{n} students may need help — see Progress' }, { one: 'طالب واحد قد يحتاج إلى مساعدة — اطّلع على المتابعة', two: 'طالبان قد يحتاجان إلى مساعدة — اطّلع على المتابعة', few: '{n} طلاب قد يحتاجون إلى مساعدة — اطّلع على المتابعة', many: '{n} طالبًا قد يحتاجون إلى مساعدة — اطّلع على المتابعة', other: '{n} طالب قد يحتاجون إلى مساعدة — اطّلع على المتابعة' }],
+  'cv.toMark': ['Ready to mark', 'جاهز للتصحيح'],
+  'cv.notIn': ['Not handed in yet', 'لم يُسلَّم بعد'],
+  'cv.marked': ['Marked and sent back', 'صُحِّح وأُعيد'],
+  'cv.mark': ['Mark', 'تصحيح'],
+  'cv.view': ['View', 'عرض'],
+  'cv.remindAll': ['Remind them ({n})', 'تذكيرهم ({n})'],
+  'mk.left': ['{n} left to mark', 'المتبقي للتصحيح: {n}'],
+  'mk.noneLeft': ['All marked', 'اكتمل التصحيح'],
+  'mk.handedIn': ['Handed in {when}', 'سُلِّم {when}'],
+  'mk.notIn': ['{name} hasn’t handed this in yet.', 'لم يسلّم {name} هذا الواجب بعد.'],
+  'mk.remindOne': ['Remind {name}', 'تذكير {name}'],
+  'mk.work': ['Work', 'العمل'],
+  'mk.tools': ['Marking tools', 'أدوات التصحيح'],
+  'mk.tick': ['Tick', 'صح'],
+  'mk.cross': ['Cross', 'خطأ'],
+  'mk.pen': ['Pen', 'قلم'],
+  'mk.undo': ['Undo', 'تراجع'],
+  'mk.hint': ['Tap the photo to add ticks and crosses.', 'انقر على الصورة لإضافة علامات الصح والخطأ.'],
+  'mk.answers': ['Answers', 'الإجابات'],
+  'mk.auto': ['Marked automatically: {score}', 'صُحِّح تلقائيًا: {score}'],
+  'mk.note': ['Note from the student', 'ملاحظة الطالب'],
+  'mk.panel': ['Mark and comment', 'الدرجة والتعليق'],
+  'mk.mark': ['Mark (out of {n})', 'الدرجة (من {n})'],
+  'mk.comment': ['Comment', 'تعليق'],
+  'mk.commentPh': ['A short note for the student…', 'ملاحظة قصيرة للطالب…'],
+  'mk.sent': ['Sent back {when}', 'أُعيد {when}'],
+  'mk.send': ['Send back to {name}', 'إعادة إلى {name}'],
+  'mk.pick': ['Choose a mark first', 'اختر الدرجة أولًا'],
+  'mk.redo': ['Ask to redo', 'إرجاع للتعديل'],
+  'mk.sentOk': ['Sent back to {name}', 'أُعيد إلى {name}'],
+  'mk.sentRedo': ['{name} has been asked to redo it', 'طُلب من {name} تعديل الواجب'],
+  'qc.working': ['Clear working', 'خطوات الحل واضحة'],
   'qc.signs': ['Check your signs', 'راجع الإشارات'],
   'qc.improve': ['Great improvement', 'تحسّن رائع'],
-  'qc.simplify': ['Simplify your final answer', 'بسّط إجابتك النهائية'],
-  'qc.units': ['Remember the units', 'تذكّر الوحدات'],
-  'g.return': ['Return', 'إعادة إلى الطالب'],
-  'g.revise': ['Return for revision', 'إرجاع للتعديل'],
-  'g.save': ['Save grade', 'حفظ التقييم'],
-  'g.next': ['Next student', 'الطالب التالي'],
-  'g.prev': ['Previous', 'السابق'],
-  'g.returned': ['Returned to {name}', 'أُعيد إلى {name}'],
-  'g.revised': ['Returned to {name} for revision', 'أُعيد إلى {name} للتعديل'],
-  'g.saved': ['Grade saved — return it whenever you’re ready.', 'حُفظ التقييم — أعده متى شئت.'],
-  'g.noSubmission': ['{name} hasn’t submitted this yet.', 'لم يسلّم {name} هذا الواجب بعد.'],
-  'g.remindOne': ['Remind {name}', 'تذكير {name}'],
-  'g.queueLeft': ['{n} left to grade in {cls}', 'المتبقي للتصحيح في {cls}: {n}'],
-  'g.allDone': ['Everything in this class is graded', 'صُحِّحت جميع أعمال هذه الشعبة'],
+  'qc.simplify': ['Simplify your answer', 'بسّط إجابتك'],
+  'rem.done': [{ one: 'Reminder added to 1 student’s homework list (demo — no message is sent).', other: 'Reminder added to {n} students’ homework lists (demo — no messages are sent).' }, { one: 'أُضيف تذكير إلى قائمة واجبات طالب واحد (للعرض فقط — لا تُرسَل رسائل).', two: 'أُضيف تذكير إلى قائمتي واجبات طالبين (للعرض فقط — لا تُرسَل رسائل).', few: 'أُضيف تذكير إلى قوائم واجبات {n} طلاب (للعرض فقط — لا تُرسَل رسائل).', many: 'أُضيف تذكير إلى قوائم واجبات {n} طالبًا (للعرض فقط — لا تُرسَل رسائل).', other: 'أُضيف تذكير إلى قوائم واجبات {n} طالب (للعرض فقط — لا تُرسَل رسائل).' }],
+  'rem.none': ['Everyone has handed this in.', 'سلّم الجميع هذا الواجب.'],
+  'pg.title': ['Progress', 'المتابعة'],
+  'pg.sub': ['Mathematics · last 6 weeks · sample data', 'الرياضيات · آخر ٦ أسابيع · بيانات تجريبية'],
+  'pg.class': ['Class', 'الشعبة'],
+  'pg.handedIn': ['Homework handed in', 'نسبة تسليم الواجبات'],
+  'pg.handedIn.hint': ['How many students handed in each homework', 'عدد الطلاب الذين سلّموا كل واجب'],
+  'pg.open': ['open', 'مفتوح'],
+  'pg.help': ['Students who may need help', 'طلاب قد يحتاجون إلى مساعدة'],
+  'pg.help.hint': ['Missed 3 or more homeworks, or an average below 50%', 'فاتهم ٣ واجبات أو أكثر، أو متوسطهم أقل من ٥٠٪'],
+  'pg.missed': ['Not handed in: {n}', 'لم يسلّم: {n}'],
+  'pg.lowAvg': ['Average {pct}', 'المتوسط {pct}'],
+  'pg.remind': ['Remind', 'تذكير'],
+  'pg.noHelp': ['No one needs extra help in this class right now.', 'لا يوجد طلاب بحاجة إلى مساعدة إضافية في هذه الشعبة حاليًا.'],
+  'pg.privacy': ['Only teachers see this. Students are never ranked.', 'لا يرى هذه الصفحة إلا المعلّمون، ولا يُرتَّب الطلاب أبدًا.'],
 
-  /* --- insights --- */
-  'in.title': ['Class insights', 'مؤشرات الصفوف'],
-  'in.subtitle': ['Mathematics · last 6 weeks · sample data', 'الرياضيات · آخر ٦ أسابيع · بيانات تجريبية'],
-  'in.privacy': ['Visible to teachers only. No student rankings are shown.', 'تظهر للمعلّمين فقط، ولا تُعرض أي ترتيبات للطلاب.'],
-  'in.completion': ['Completion rate per assignment', 'نسبة الإنجاز لكل واجب'],
-  'in.timeliness': ['On time, late and missing', 'في الموعد، ومتأخر، وغير مُسلَّم'],
-  'in.trend': ['Average mark trend', 'اتجاه متوسط الدرجات'],
-  'in.trend.sub': ['Class average for each marked assignment', 'متوسط الشعبة في كل واجب مُقيَّم'],
-  'in.noMarks': ['No marked work yet.', 'لا توجد أعمال مُقيَّمة بعد.'],
-  'in.support': ['Students who may need support', 'طلاب قد يحتاجون إلى دعم'],
-  'in.support.hint': ['3 or more missing pieces, or an average below 50%', '٣ واجبات غير مُسلَّمة أو أكثر، أو متوسط أقل من ٥٠٪'],
-  'in.noSupport': ['No students flagged in this class right now.', 'لا يوجد طلاب بحاجة إلى متابعة في هذه الشعبة حاليًا.'],
-  'in.onTime': ['On time', 'في الموعد'],
-  'in.late': ['Late', 'متأخر'],
-  'in.missing': ['Missing', 'غير مُسلَّم'],
-  'in.pending': ['Not due yet', 'لم يحن موعده'],
-  'in.open': ['open', 'مفتوح'],
-  'in.table': ['Show table', 'عرض كجدول'],
-  'in.chart': ['Show chart', 'عرض كمخطط'],
-  'in.assignment': ['Assignment', 'الواجب'],
-  'in.rate': ['Rate', 'النسبة'],
-  'in.avgMark': ['Average mark', 'متوسط الدرجات'],
-  'in.missingCount': ['{n} missing', 'غير مُسلَّم: {n}'],
-  'in.avg': ['average {pct}', 'المتوسط {pct}'],
-  'in.viewWork': ['View work', 'عرض الأعمال'],
+  /* --- set homework --- */
+  'sh.title': ['Set homework', 'إنشاء واجب'],
+  'sh.step1': ['What should students do?', 'ما المطلوب من الطلاب؟'],
+  'sh.kind.photo': ['Photo of written work', 'صورة لعمل مكتوب'],
+  'sh.kind.photo.d': ['Students work on paper, then take a photo', 'يحلّ الطلاب على الورق ثم يلتقطون صورة'],
+  'sh.kind.quiz': ['Quick quiz', 'اختبار قصير'],
+  'sh.kind.quiz.d': ['Multiple choice — marked for you', 'اختيار من متعدد، يُصحَّح تلقائيًا'],
+  'sh.kind.written': ['Written answer', 'إجابة مكتوبة'],
+  'sh.kind.written.d': ['Students type their answer', 'يكتب الطلاب إجاباتهم'],
+  'sh.instr.photo': ['Complete the worksheet in your exercise book. Show your working, then take a clear photo of each page.', 'أكمل ورقة العمل في دفترك مع إظهار خطوات الحل، ثم التقط صورة واضحة لكل صفحة.'],
+  'sh.instr.quiz': ['Answer each question. Your mark appears when your teacher sends it back.', 'أجب عن كل سؤال، وستظهر درجتك عندما يعيده المعلّم.'],
+  'sh.instr.written': ['Write your answer in full sentences.', 'اكتب إجابتك بجمل كاملة.'],
+  'sh.photoPrompt': ['Take a clear photo of each page of your work.', 'التقط صورة واضحة لكل صفحة من عملك.'],
+  'sh.step2': ['Details', 'التفاصيل'],
+  'sh.fTitle': ['Title', 'العنوان'],
+  'sh.fTitlePh': ['e.g. Fractions Review', 'مثال: مراجعة الكسور'],
+  'sh.fInstr': ['Instructions for students', 'تعليمات للطلاب'],
+  'sh.fQuestion': ['Question', 'السؤال'],
+  'sh.fQuestionPh': ['What should students answer?', 'ما السؤال الذي يجيب عنه الطلاب؟'],
+  'sh.questions': ['Questions', 'الأسئلة'],
+  'sh.qType': ['Question type', 'نوع السؤال'],
+  'sh.qType.mcq': ['Multiple choice', 'اختيار من متعدد'],
+  'sh.qType.tf': ['True / False', 'صح أو خطأ'],
+  'sh.removeQ': ['Remove question', 'حذف السؤال'],
+  'sh.qPh': ['Type the question', 'اكتب السؤال'],
+  'sh.option': ['Answer {n}', 'الخيار {n}'],
+  'sh.correct': ['Correct answer', 'الإجابة الصحيحة'],
+  'sh.correctHint': ['Select the correct answer.', 'حدّد الإجابة الصحيحة.'],
+  'sh.answerIs': ['The answer is', 'الإجابة الصحيحة:'],
+  'sh.addQ': ['Add question', 'إضافة سؤال'],
+  'sh.outOf': ['Marked out of', 'الدرجة من'],
+  'sh.worksheet': ['Attach a worksheet', 'إرفاق ورقة عمل'],
+  'sh.autoMarked': ['Marked for you automatically', 'يُصحَّح تلقائيًا'],
+  'sh.step3': ['Who and when', 'لمن ومتى'],
+  'sh.classes': ['Class', 'الشعبة'],
+  'sh.due': ['Due', 'موعد التسليم'],
+  'sh.due.tomorrow': ['Tomorrow', 'غدًا'],
+  'sh.due.2days': ['In 2 days', 'بعد يومين'],
+  'sh.due.week': ['Next week', 'الأسبوع القادم'],
+  'sh.due.custom': ['Pick a date', 'اختيار تاريخ'],
+  'sh.dueDate': ['Due date', 'تاريخ التسليم'],
+  'sh.dueTime': ['Due time', 'وقت التسليم'],
+  'sh.more': ['More options', 'خيارات إضافية'],
+  'sh.acceptLate': ['Accept late work', 'قبول التسليم المتأخر'],
+  'sh.acceptLate.hint': ['It will be marked as late', 'ويُسجَّل متأخرًا'],
+  'sh.allowRedo': ['Students can redo after feedback', 'السماح بإعادة التسليم بعد الملاحظات'],
+  'sh.sendLater': ['Send later', 'إرسال لاحقًا'],
+  'sh.preview': ['See what students see', 'معاينة ما يراه الطلاب'],
+  'sh.previewNote': ['This is exactly what students will see. Nothing here is saved.', 'هذا ما سيراه الطلاب تمامًا، ولا يُحفظ شيء هنا.'],
+  'sh.send': ['Send to {cls}', 'إرسال إلى {cls}'],
+  'sh.schedule': ['Schedule for {when}', 'جدولة الإرسال {when}'],
+  'sh.sent': ['Sent to {cls}. Students can see it now.', 'أُرسل إلى {cls}، ويستطيع الطلاب رؤيته الآن.'],
+  'sh.scheduled': ['Scheduled — students will see it {when}.', 'جُدول الإرسال، وسيراه الطلاب {when}.'],
+  'sh.seeAsStudent': ['See as student', 'العرض بصفة طالب'],
+  'sh.err.title': ['Please add a title.', 'أضف عنوانًا.'],
+  'sh.err.class': ['Choose at least one class.', 'اختر شعبة واحدة على الأقل.'],
+  'sh.err.quiz': ['Each question needs text and at least two answers.', 'يحتاج كل سؤال إلى نص وخيارين على الأقل.'],
+  'sh.err.due': ['Choose a due date in the future.', 'اختر موعد تسليم في المستقبل.'],
 
   /* --- admin --- */
-  'ad.title': ['School overview', 'نظرة عامة على المدرسة'],
   'ad.user': ['Head of Middle School', 'رئيس المرحلة المتوسطة'],
-  'ad.scope': ['Middle School · Grades 6–8', 'المرحلة المتوسطة · الصفوف ٦–٨'],
-  'ad.subtitle': ['Middle School · Grades 6–8 · sample data', 'المرحلة المتوسطة · الصفوف ٦–٨ · بيانات تجريبية'],
-  'ad.liveNote': ['Grade 8 Mathematics and Grade 8B update live from this demo session. All other figures are fixed sample data.', 'تتحدّث بيانات رياضيات الصف الثامن والشعبة ب مباشرة من هذه الجلسة التجريبية، وبقية الأرقام بيانات تجريبية ثابتة.'],
-  'ad.grade': ['Grade', 'الصف'],
-  'ad.gradeN': ['Grade {g}', 'الصف {g}'],
-  'ad.allGrades': ['All grades', 'كل الصفوف'],
-  'ad.subject': ['Subject', 'المادة'],
+  'ad.title': ['School overview', 'نظرة عامة على المدرسة'],
+  'ad.sub': ['Middle School · Grades 6–8 · sample data', 'المرحلة المتوسطة · الصفوف ٦–٨ · بيانات تجريبية'],
   'ad.week': ['Week', 'الأسبوع'],
   'ad.wk.prev': ['Last week', 'الأسبوع الماضي'],
   'ad.wk.this': ['This week', 'هذا الأسبوع'],
   'ad.wk.next': ['Next week', 'الأسبوع القادم'],
-  'ad.soFar': ['Share of work handed in, for deadlines that have passed in the selected week', 'نسبة الأعمال المُسلَّمة للواجبات التي انتهى موعدها في الأسبوع المحدد'],
-  'ad.tipHanded': ['{n} of {total} handed in', 'سُلِّم {n} من {total}'],
-  'ad.kpi.completion': ['Homework completion', 'إنجاز الواجبات'],
-  'ad.kpi.outstanding': ['Outstanding submissions', 'تسليمات متبقية'],
-  'ad.kpi.late': ['Late submissions', 'تسليمات متأخرة'],
-  'ad.kpi.backlog': ['Grading backlog', 'أعمال بانتظار التصحيح'],
-  'ad.kpi.turnaround': ['Avg. marking turnaround', 'متوسط مدة التصحيح'],
-  'ad.byGrade': ['Completion by grade', 'الإنجاز حسب الصف'],
-  'ad.bySubject': ['Completion by subject', 'الإنجاز حسب المادة'],
-  'ad.load': ['Assignment load per class per day', 'عدد الواجبات المطلوبة لكل شعبة يوميًا'],
-  'ad.load.hint': ['All subjects. Days with 3 or more assignments due are highlighted.', 'جميع المواد. تُبرز الأيام التي يُطلب فيها ٣ واجبات أو أكثر.'],
-  'ad.load.flag': [{ one: '{cls} has {n} assignment due on {day}', other: '{cls} has {n} assignments due on {day}' }, { one: 'لدى {cls} واجب واحد مطلوب يوم {day}', two: 'لدى {cls} واجبان مطلوبان يوم {day}', few: 'لدى {cls} {n} واجبات مطلوبة يوم {day}', many: 'لدى {cls} {n} واجبًا مطلوبًا يوم {day}', other: 'لدى {cls} {n} واجب مطلوب يوم {day}' }],
-  'ad.load.none': ['No overloaded days in this selection.', 'لا توجد أيام مزدحمة ضمن هذا الاختيار.'],
-  'ad.heavy': ['heavy day', 'يوم مزدحم'],
+  'ad.k.handedIn': ['Homework handed in', 'نسبة تسليم الواجبات'],
+  'ad.k.toMark': ['Waiting to be marked', 'بانتظار التصحيح'],
+  'ad.k.followUp': ['Students to follow up', 'طلاب بحاجة إلى متابعة'],
+  'ad.noneDue': ['No deadlines have passed yet this week.', 'لم يحن أي موعد تسليم بعد هذا الأسبوع.'],
+  'ad.load': ['Homework due per class each day', 'عدد الواجبات المطلوبة لكل شعبة يوميًا'],
+  'ad.load.hint': ['All subjects. Days with 3 or more are highlighted — that is a lot for one day.', 'جميع المواد. تُبرز الأيام التي فيها ٣ واجبات أو أكثر، فهي كثيرة على يوم واحد.'],
   'ad.class': ['Class', 'الشعبة'],
-  'ad.backlog': ['Teacher grading backlog', 'الأعمال بانتظار التصحيح لدى المعلّمين'],
-  'ad.teacher': ['Teacher', 'المعلّم'],
-  'ad.toGrade': ['To grade', 'للتصحيح'],
-  'ad.turn': ['Turnaround', 'مدة التصحيح'],
-  'ad.live': ['LIVE', 'مباشر'],
-  'ad.followUp': ['Students needing follow-up', 'طلاب بحاجة إلى متابعة'],
-  'ad.followUp.hint': ['3 or more missing pieces of work', '٣ واجبات غير مُسلَّمة أو أكثر'],
-  'ad.followUp.none': ['No students need follow-up for this selection.', 'لا يوجد طلاب بحاجة إلى متابعة ضمن هذا الاختيار.'],
-  'ad.notify': ['Notify homeroom teacher', 'إبلاغ رائد الفصل'],
+  'ad.load.flag': [{ one: '{cls} has {n} assignment due on {day}', other: '{cls} has {n} assignments due on {day}' }, { one: 'لدى {cls} واجب واحد مطلوب يوم {day}', two: 'لدى {cls} واجبان مطلوبان يوم {day}', few: 'لدى {cls} {n} واجبات مطلوبة يوم {day}', many: 'لدى {cls} {n} واجبًا مطلوبًا يوم {day}', other: 'لدى {cls} {n} واجب مطلوب يوم {day}' }],
+  'ad.load.none': ['No overloaded days this week.', 'لا توجد أيام مزدحمة هذا الأسبوع.'],
+  'ad.byGrade': ['Handed in by grade', 'نسبة التسليم حسب الصف'],
+  'ad.byGrade.hint': ['For deadlines that have passed this week', 'للواجبات التي انتهى موعدها هذا الأسبوع'],
+  'ad.gradeN': ['Grade {g}', 'الصف {g}'],
+  'ad.followUp': ['Students to follow up', 'طلاب بحاجة إلى متابعة'],
+  'ad.followUp.hint': ['Missed 3 or more homeworks', 'فاتهم ٣ واجبات أو أكثر'],
+  'ad.missed': ['Not handed in: {n}', 'لم يسلّم: {n}'],
+  'ad.notify': ['Tell homeroom teacher', 'إبلاغ رائد الفصل'],
   'ad.notified': ['Noted for follow-up', 'سُجّلت للمتابعة'],
-  'ad.notifyToast': ['Demo: the homeroom teacher of {cls} would be notified here. Nothing was sent.', 'للعرض: سيُبلَّغ رائد فصل {cls} هنا، ولم يُرسَل أي إشعار.'],
-  'ad.activity': ['Recent activity', 'آخر النشاطات'],
-  'ad.act.submitted': ['{name} submitted “{title}”', 'سلّم {name} واجب «{title}»'],
-  'ad.act.returned': ['“{title}” returned to {name}', 'أُعيد واجب «{title}» إلى {name}'],
-  'ad.act.published': ['“{title}” published for {cls}', 'نُشر واجب «{title}» لـ{cls}'],
-
-  /* --- demo guide --- */
-  'guide.title': ['Demo guide', 'دليل العرض'],
-  'guide.hide': ['Hide demo guide', 'إخفاء دليل العرض'],
-  'guide.go': ['Go', 'انتقال'],
-  'guide.done': ['Done', 'تم'],
-  'guide.progress': ['{n}/6', '{n} من ٦'],
-  'guide.s1': ['Teacher: create “Fractions Review” for 8B from the Worksheet photo template, set a due date and publish', 'المعلّم: أنشئ واجب «Fractions Review» للشعبة ب من قالب «صورة ورقة عمل»، وحدّد موعد التسليم ثم انشره'],
-  'guide.s2': ['Student: it appears at the top of “Due soon” — open it and submit paper homework with a sample photo', 'الطالب: يظهر في أعلى «مواعيد تسليم قريبة» — افتحه وسلّم الواجب الورقي بصورة نموذجية'],
-  'guide.s3': ['Teacher: the submission is in the queue — annotate the photo, score the rubric, comment and Return', 'المعلّم: التسليم في قائمة التصحيح — علّق على الصورة وقيّم المعايير وأضف تعليقًا ثم أعده'],
-  'guide.s4': ['Student: see the mark, the comment and the annotations', 'الطالب: اطّلع على الدرجة والتعليق والملاحظات على الصورة'],
-  'guide.s5': ['Teacher: Class insights — completion goes up', 'المعلّم: مؤشرات الصفوف — ترتفع نسبة الإنجاز'],
-  'guide.s6': ['Admin: the school overview reflects the new submission', 'الإدارة: تظهر التسليمة الجديدة في النظرة العامة'],
-});
+  'ad.notifyToast': ['Demo: the homeroom teacher of {cls} would be told here. Nothing was sent.', 'للعرض: سيُبلَّغ رائد فصل {cls} هنا، ولم يُرسَل أي إشعار.'],
+  'ad.latest': ['Latest activity', 'آخر النشاطات'],
+  'ad.live': ['LIVE', 'مباشر'],
+  'ad.act.in': ['{name} handed in “{title}”', 'سلّم {name} واجب «{title}»'],
+  'ad.act.back': ['“{title}” sent back to {name}', 'أُعيد واجب «{title}» إلى {name}'],
+  'ad.act.set': ['“{title}” set for {cls}', 'أُرسل واجب «{title}» إلى {cls}'],
+  'ad.liveNote': ['Grade 8 boys’ Mathematics and class 8B1 update live from this demo. Other figures are fixed sample data.', 'تتحدّث بيانات رياضيات الصف الثامن (بنين) وشعبة 8B1 مباشرة من هذا العرض، وبقية الأرقام بيانات تجريبية ثابتة.'],
+};
 
 /* ============================================================================
  * 3. FORMATTING, TIME & SMALL HELPERS
@@ -880,12 +606,19 @@ const TEACHERS = {
   maha: { en: 'Ms. Maha Al-Sayed', ar: 'المعلّمة مها السيد', subject: 'english' },
 };
 const DEMO_TEACHER = 'sarah';
-const SARAH_CLASSES = ['8A', '8B', '8C'];
+const SARAH_CLASSES = ['8B1', '8B2', '8B3'];
 
-const GRADE_AR = { 1: 'الأول', 6: 'السادس', 7: 'السابع', 8: 'الثامن', 11: 'الحادي عشر' };
+const GRADE_AR = { 1: 'الأول', 6: 'السادس', 7: 'السابع', 8: 'الثامن', 9: 'التاسع', 10: 'العاشر', 11: 'الحادي عشر', 12: 'الثاني عشر' };
+const KG_AR = { 1: 'الأولى', 2: 'الثانية', 3: 'الثالثة' };
 const SEC_AR = { A: 'أ', B: 'ب', C: 'ج' };
-const parseCls = (c) => ({ g: Number(c.slice(0, -1)), s: c.slice(-1) });
-const ADMIN_CLASSES = ['6A', '6B', '6C', '7A', '7B', '7C', '8A', '8B', '8C'];
+/** School class codes: boys 8B1, girls 8G2, KG with letters (KG2-A). */
+function parseCls(c) {
+  const kg = /^KG(\d)-([A-Z])$/.exec(c);
+  if (kg) return { kg: true, g: 0, level: Number(kg[1]), s: kg[2] };
+  const m = /^(\d+)([BG])(\d+)$/.exec(c);
+  return m ? { g: Number(m[1]), gender: m[2], n: Number(m[3]) } : { g: 0 };
+}
+const ADMIN_CLASSES = ['6B1', '6B2', '6G1', '6G2', '7B1', '7B2', '7G1', '7G2', '8B1', '8B2', '8B3', '8G1', '8G2'];
 
 const FIRST_BOYS = [['Abdullah', 'عبدالله'], ['Abdulaziz', 'عبدالعزيز'], ['Ahmed', 'أحمد'], ['Ali', 'علي'], ['Anas', 'أنس'], ['Bader', 'بدر'], ['Hamad', 'حمد'], ['Hussain', 'حسين'], ['Ibrahim', 'إبراهيم'], ['Kareem', 'كريم'], ['Khalid', 'خالد'], ['Mazen', 'مازن'], ['Mohammed', 'محمد'], ['Muath', 'معاذ'], ['Nasser', 'ناصر'], ['Osama', 'أسامة'], ['Rakan', 'راكان'], ['Saud', 'سعود'], ['Sami', 'سامي'], ['Talal', 'طلال'], ['Waleed', 'وليد'], ['Yazeed', 'يزيد'], ['Yousef', 'يوسف'], ['Ziyad', 'زياد'], ['Hamza', 'حمزة'], ['Majed', 'ماجد'], ['Turki', 'تركي'], ['Saleh', 'صالح'], ['Fahad', 'فهد'], ['Sultan', 'سلطان'], ['Nawaf', 'نواف'], ['Rayan', 'ريان'], ['Adam', 'آدم'], ['Zaid', 'زيد'], ['Tariq', 'طارق'], ['Mustafa', 'مصطفى'], ['Hassan', 'حسن'], ['Saad', 'سعد'], ['Faris', 'فارس'], ['Hatem', 'حاتم'], ['Ammar', 'عمّار'], ['Bilal', 'بلال'], ['Jamal', 'جمال'], ['Luay', 'لؤي'], ['Mansour', 'منصور']];
 const FAMILY = [['Al-Qahtani', 'القحطاني'], ['Al-Ghamdi', 'الغامدي'], ['Al-Zahrani', 'الزهراني'], ['Al-Otaibi', 'العتيبي'], ['Al-Shehri', 'الشهري'], ['Al-Dosari', 'الدوسري'], ['Al-Mutairi', 'المطيري'], ['Al-Shammari', 'الشمري'], ['Al-Malki', 'المالكي'], ['Al-Juhani', 'الجهني'], ['Al-Subaie', 'السبيعي'], ['Al-Anazi', 'العنزي'], ['Al-Sharif', 'الشريف'], ['Al-Amoudi', 'العمودي'], ['Al-Harthi', 'الحارثي'], ['Al-Bishi', 'البيشي'], ['Al-Yami', 'اليامي'], ['Al-Rashidi', 'الرشيدي'], ['Al-Hazmi', 'الحازمي'], ['Al-Saadi', 'السعدي'], ['Bakr', 'بكر'], ['Khan', 'خان'], ['Siddiqui', 'صدّيقي'], ['Al-Attas', 'العطاس'], ['Hashem', 'هاشم'], ['Al-Kaabi', 'الكعبي'], ['Al-Faraj', 'الفرج'], ['Al-Saleh', 'الصالح'], ['Al-Harbi', 'الحربي'], ['Bawazir', 'باوزير']];
@@ -894,9 +627,9 @@ function makeStudent(id, cls, first, family) {
   return { id, cls, en: `${first[0]} ${family[0]}`, ar: `${first[1]} ${family[1]}`, firstEn: first[0], firstAr: first[1] };
 }
 
-const STUDENT_OMAR = makeStudent('s_omar', '8B', ['Omar', 'عمر'], ['Al-Harbi', 'الحربي']);
-const STUDENT_LAYAN = makeStudent('s_layan', '1A', ['Layan', 'ليان'], ['Al-Qahtani', 'القحطاني']);
-const STUDENT_FAISAL = makeStudent('s_faisal', '11A', ['Faisal', 'فيصل'], ['Al-Ghamdi', 'الغامدي']);
+const STUDENT_OMAR = makeStudent('s_omar', '8B1', ['Omar', 'عمر'], ['Al-Harbi', 'الحربي']);
+const STUDENT_LAYAN = makeStudent('s_layan', 'KG2-A', ['Layan', 'ليان'], ['Al-Qahtani', 'القحطاني']);
+const STUDENT_FAISAL = makeStudent('s_faisal', '11B1', ['Faisal', 'فيصل'], ['Al-Ghamdi', 'الغامدي']);
 const STAGE_STUDENT = { early: STUDENT_LAYAN, middle: STUDENT_OMAR, senior: STUDENT_FAISAL };
 
 /** Deterministic class rosters (24 in 8B including Omar; 22 in 8A and 8C). */
@@ -916,16 +649,16 @@ const ROSTERS = (() => {
     }
     return out;
   };
-  const r8b = make('8B', 23, 3);
+  const r8b = make('8B1', 23, 3);
   const all = {
-    '8A': make('8A', 22, 17),
-    '8B': [STUDENT_OMAR, ...r8b].sort((a, b) => a.en.localeCompare(b.en)),
-    '8C': make('8C', 22, 30),
-    '1A': [STUDENT_LAYAN],
-    '11A': [STUDENT_FAISAL],
+    '8B2': make('8B2', 22, 17),
+    '8B1': [STUDENT_OMAR, ...r8b].sort((a, b) => a.en.localeCompare(b.en)),
+    '8B3': make('8B3', 22, 30),
+    'KG2-A': [STUDENT_LAYAN],
+    '11B1': [STUDENT_FAISAL],
   };
-  all['8A'].sort((a, b) => a.en.localeCompare(b.en));
-  all['8C'].sort((a, b) => a.en.localeCompare(b.en));
+  all['8B2'].sort((a, b) => a.en.localeCompare(b.en));
+  all['8B3'].sort((a, b) => a.en.localeCompare(b.en));
   return all;
 })();
 const STUDENTS = Object.fromEntries(Object.values(ROSTERS).flat().map((s) => [s.id, s]));
@@ -934,10 +667,10 @@ const STUDENTS = Object.fromEntries(Object.values(ROSTERS).flat().map((s) => [s.
 const SUPPORT_PATTERNS = (() => {
   const pick = (cls, i) => ROSTERS[cls].filter((s) => s.id !== 's_omar')[i].id;
   return {
-    [pick('8B', 15)]: { missing: ['m2', 'm3', 'm4'], ability: 0.55 },
-    [pick('8B', 9)]: { missing: ['m1', 'm4', 'm5'], ability: 0.6 },
-    [pick('8A', 8)]: { missing: ['m2', 'm3', 'm5'], ability: 0.58 },
-    [pick('8C', 4)]: { missing: ['m3'], ability: 0.36 },
+    [pick('8B1', 15)]: { missing: ['m2', 'm3', 'm4'], ability: 0.55 },
+    [pick('8B1', 9)]: { missing: ['m1', 'm4', 'm5'], ability: 0.6 },
+    [pick('8B2', 8)]: { missing: ['m2', 'm3', 'm5'], ability: 0.58 },
+    [pick('8B3', 4)]: { missing: ['m3'], ability: 0.36 },
   };
 })();
 
@@ -1175,37 +908,37 @@ function buildSeed(now = Date.now()) {
 
   /* --- Ms. Sarah's Mathematics (8A / 8B / 8C) --- */
   const ws = (name) => [{ id: uid('att'), kind: 'worksheet', name }];
-  add({ id: 'm1', title: 'Number Sense Warm-up', subject: 'math', teacherId: 'sarah', classes: ['8A', '8B', '8C'], dueAt: atDay(-33, 19, 0, now), instructions: 'A quick check on rounding, powers and comparing numbers. Choose the best answer for each question.', blocks: [
+  add({ id: 'm1', title: 'Number Sense Warm-up', subject: 'math', teacherId: 'sarah', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-33, 19, 0, now), instructions: 'A quick check on rounding, powers and comparing numbers. Choose the best answer for each question.', blocks: [
     { type: 'mcq', prompt: 'Which number is irrational?', options: ['0.75', '√2', '3/8', '−4'], correct: 1, points: 2 },
     { type: 'mcq', prompt: 'Round 3.4762 to 2 decimal places.', options: ['3.47', '3.48', '3.5', '3.476'], correct: 1, points: 2 },
     { type: 'mcq', prompt: 'What is 2⁻³?', options: ['−8', '−6', '1/8', '1/6'], correct: 2, points: 2 },
     { type: 'mcq', prompt: 'Which is the largest?', options: ['0.6', '5/8', '62%', '0.059'], correct: 1, points: 2 },
     { type: 'tf', prompt: 'The square root of 81 is 9.', correct: true, points: 2 },
   ] });
-  add({ id: 'm2', title: 'Algebraic Expressions Review', subject: 'math', teacherId: 'sarah', classes: ['8A', '8B', '8C'], dueAt: atDay(-26, 19, 0, now), sample: 'equations', instructions: 'Expand, factorise and simplify — Exercise 5A questions 1–15. Show every step.', attachments: ws('Exercise 5A — Expressions.pdf'), blocks: [PAPER_BLOCK(10)] });
-  add({ id: 'm3', title: 'Ratio & Proportion Quiz', subject: 'math', teacherId: 'sarah', classes: ['8A', '8B', '8C'], dueAt: atDay(-19, 19, 0, now), instructions: 'Five questions on ratio and direct proportion. Marked automatically.', blocks: [
+  add({ id: 'm2', title: 'Algebraic Expressions Review', subject: 'math', teacherId: 'sarah', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-26, 19, 0, now), sample: 'equations', instructions: 'Expand, factorise and simplify — Exercise 5A questions 1–15. Show every step.', attachments: ws('Exercise 5A — Expressions.pdf'), blocks: [PAPER_BLOCK(10)] });
+  add({ id: 'm3', title: 'Ratio & Proportion Quiz', subject: 'math', teacherId: 'sarah', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-19, 19, 0, now), instructions: 'Five questions on ratio and direct proportion. Marked automatically.', blocks: [
     { type: 'mcq', prompt: 'Simplify the ratio 18 : 24.', options: ['3 : 4', '2 : 3', '9 : 12', '6 : 8'], correct: 0, points: 2 },
     { type: 'mcq', prompt: 'Share 45 sweets in the ratio 2 : 3. How many are in the larger share?', options: ['18', '27', '30', '15'], correct: 1, points: 2 },
     { type: 'mcq', prompt: '5 pens cost 12 SAR. How much do 8 pens cost?', options: ['19.20 SAR', '18.00 SAR', '20.40 SAR', '16.80 SAR'], correct: 0, points: 2 },
     { type: 'tf', prompt: 'If y is directly proportional to x, doubling x doubles y.', correct: true, points: 2 },
     { type: 'mcq', prompt: 'A map has a scale of 1 : 50 000. What does 4 cm on the map represent?', options: ['2 km', '20 km', '200 m', '0.2 km'], correct: 0, points: 2 },
   ] });
-  add({ id: 'm4', title: 'Percentages in Real Life', subject: 'math', teacherId: 'sarah', classes: ['8A', '8B', '8C'], dueAt: atDay(-12, 19, 0, now), sample: 'textbook', instructions: 'Complete Exercise 4B on percentage increase and decrease. Photograph your answers.', attachments: ws('Exercise 4B — Percentages.pdf'), blocks: [PAPER_BLOCK(10)] });
-  add({ id: 'm5', title: 'Angles in Polygons', subject: 'math', teacherId: 'sarah', classes: ['8A', '8B', '8C'], dueAt: atDay(-5, 19, 0, now), sample: 'textbook', instructions: 'Find interior and exterior angles of regular polygons — Exercise 8A, questions 1–10.', attachments: ws('Exercise 8A — Polygons.pdf'), blocks: [PAPER_BLOCK(10)] });
-  add({ id: 'm6', title: 'Linear Equations Practice', subject: 'math', teacherId: 'sarah', classes: ['8B'], dueAt: atDay(1, 19, 0, now), publishAt: atDay(-3, 7, 30, now), sample: 'equations', instructions: 'Complete Exercise 6C questions 1–12 in your exercise book. Show each step of your working, then check each answer by substituting it back into the equation.', attachments: ws('Exercise 6C — Linear Equations.pdf'), blocks: [PAPER_BLOCK(10, 'Take a clear photo of each page of your working (questions 1–12).')] });
-  add({ id: 'm7', title: 'Linear Equations Practice', subject: 'math', teacherId: 'sarah', classes: ['8A'], dueAt: atDay(2, 19, 0, now), publishAt: atDay(-2, 7, 30, now), sample: 'equations', instructions: 'Complete Exercise 6C questions 1–12 in your exercise book. Show each step of your working, then check each answer by substituting it back into the equation.', attachments: ws('Exercise 6C — Linear Equations.pdf'), blocks: [PAPER_BLOCK(10, 'Take a clear photo of each page of your working (questions 1–12).')] });
-  add({ id: 'm8', title: 'Angles & Parallel Lines Quiz', subject: 'math', teacherId: 'sarah', classes: ['8C'], dueAt: atDay(5, 19, 0, now), publishAt: atDay(1, 7, 0, now), status: 'scheduled', instructions: 'Corresponding, alternate and co-interior angles. Marked automatically.', blocks: [
+  add({ id: 'm4', title: 'Percentages in Real Life', subject: 'math', teacherId: 'sarah', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-12, 19, 0, now), sample: 'textbook', instructions: 'Complete Exercise 4B on percentage increase and decrease. Photograph your answers.', attachments: ws('Exercise 4B — Percentages.pdf'), blocks: [PAPER_BLOCK(10)] });
+  add({ id: 'm5', title: 'Angles in Polygons', subject: 'math', teacherId: 'sarah', classes: ['8B1', '8B2', '8B3'], dueAt: atDay(-5, 19, 0, now), sample: 'textbook', instructions: 'Find interior and exterior angles of regular polygons — Exercise 8A, questions 1–10.', attachments: ws('Exercise 8A — Polygons.pdf'), blocks: [PAPER_BLOCK(10)] });
+  add({ id: 'm6', title: 'Linear Equations Practice', subject: 'math', teacherId: 'sarah', classes: ['8B1'], dueAt: atDay(1, 19, 0, now), publishAt: atDay(-3, 7, 30, now), sample: 'equations', instructions: 'Complete Exercise 6C questions 1–12 in your exercise book. Show each step of your working, then check each answer by substituting it back into the equation.', attachments: ws('Exercise 6C — Linear Equations.pdf'), blocks: [PAPER_BLOCK(10, 'Take a clear photo of each page of your working (questions 1–12).')] });
+  add({ id: 'm7', title: 'Linear Equations Practice', subject: 'math', teacherId: 'sarah', classes: ['8B2'], dueAt: atDay(2, 19, 0, now), publishAt: atDay(-2, 7, 30, now), sample: 'equations', instructions: 'Complete Exercise 6C questions 1–12 in your exercise book. Show each step of your working, then check each answer by substituting it back into the equation.', attachments: ws('Exercise 6C — Linear Equations.pdf'), blocks: [PAPER_BLOCK(10, 'Take a clear photo of each page of your working (questions 1–12).')] });
+  add({ id: 'm8', title: 'Angles & Parallel Lines Quiz', subject: 'math', teacherId: 'sarah', classes: ['8B3'], dueAt: atDay(5, 19, 0, now), publishAt: atDay(1, 7, 0, now), status: 'scheduled', instructions: 'Corresponding, alternate and co-interior angles. Marked automatically.', blocks: [
     { type: 'mcq', prompt: 'Alternate angles are…', options: ['equal', 'supplementary', 'complementary', 'always 90°'], correct: 0, points: 2 },
     { type: 'tf', prompt: 'Co-interior angles add up to 180°.', correct: true, points: 2 },
     { type: 'mcq', prompt: 'Two parallel lines are cut by a transversal. One angle is 65°. Its corresponding angle is…', options: ['25°', '65°', '115°', '130°'], correct: 1, points: 2 },
   ] });
 
   /* --- Omar's other subjects (Grade 8B, other teachers) --- */
-  add({ id: 'en1', title: 'Persuasive Paragraph: School Uniforms', subject: 'english', teacherId: 'emily', classes: ['8B'], dueAt: atDay(3, 19, 0, now), instructions: 'Write one persuasive paragraph (150–200 words) arguing for or against school uniforms. Use the PEEL structure: Point, Evidence, Explain, Link.', rubric: ['content', 'evidence', 'language'], blocks: [
+  add({ id: 'en1', title: 'Persuasive Paragraph: School Uniforms', subject: 'english', teacherId: 'emily', classes: ['8B1'], dueAt: atDay(3, 19, 0, now), instructions: 'Write one persuasive paragraph (150–200 words) arguing for or against school uniforms. Use the PEEL structure: Point, Evidence, Explain, Link.', rubric: ['content', 'evidence', 'language'], blocks: [
     { type: 'short', prompt: 'Write your topic sentence (your main point).', points: 2 },
     { type: 'long', prompt: 'Write your full persuasive paragraph.', points: 8 },
   ] });
-  add({ id: 'sc1', title: 'States of Matter Quiz', subject: 'science', teacherId: 'yusuf', classes: ['8B'], dueAt: atDay(-6, 19, 0, now), instructions: 'Six questions on particles and changes of state. Marked automatically.', blocks: [
+  add({ id: 'sc1', title: 'States of Matter Quiz', subject: 'science', teacherId: 'yusuf', classes: ['8B1'], dueAt: atDay(-6, 19, 0, now), instructions: 'Six questions on particles and changes of state. Marked automatically.', blocks: [
     { type: 'mcq', prompt: 'In which state do particles vibrate in fixed positions?', options: ['Solid', 'Liquid', 'Gas', 'Plasma'], correct: 0, points: 2 },
     { type: 'mcq', prompt: 'What is the change from gas to liquid called?', options: ['Evaporation', 'Condensation', 'Melting', 'Sublimation'], correct: 1, points: 2 },
     { type: 'mcq', prompt: 'Which has the weakest forces between its particles?', options: ['Ice', 'Water', 'Steam', 'Iron'], correct: 2, points: 2 },
@@ -1213,59 +946,59 @@ function buildSeed(now = Date.now()) {
     { type: 'tf', prompt: 'Diffusion happens faster in gases than in liquids.', correct: true, points: 1 },
     { type: 'tf', prompt: 'Gases have a fixed volume.', correct: false, points: 1 },
   ] });
-  add({ id: 'ar1', title: 'قراءة وفهم: نص عن الأمانة', subject: 'arabic', teacherId: 'mona', classes: ['8B'], lang: 'ar', dueAt: atDay(3, 19, 0, now), instructions: 'اقرأ النص المرفق «الأمانة خُلُق الكرام» قراءة متأنية، ثم أجب عن الأسئلة الآتية.', attachments: [{ id: 'att_ar1', kind: 'worksheet', name: 'نص: الأمانة خُلُق الكرام.pdf' }], rubric: ['understanding', 'language'], blocks: [
+  add({ id: 'ar1', title: 'قراءة وفهم: نص عن الأمانة', subject: 'arabic', teacherId: 'mona', classes: ['8B1'], lang: 'ar', dueAt: atDay(3, 19, 0, now), instructions: 'اقرأ النص المرفق «الأمانة خُلُق الكرام» قراءة متأنية، ثم أجب عن الأسئلة الآتية.', attachments: [{ id: 'att_ar1', kind: 'worksheet', name: 'نص: الأمانة خُلُق الكرام.pdf' }], rubric: ['understanding', 'language'], blocks: [
     { type: 'mcq', prompt: 'ما الفكرة الرئيسة في النص؟', options: ['فضل الأمانة وأثرها في المجتمع', 'أهمية الرياضة للجسم', 'وصف رحلة إلى الصحراء', 'قصة عن الصداقة'], correct: 0, points: 2 },
     { type: 'short', prompt: 'ما معنى كلمة «الوفاء» كما وردت في النص؟', points: 2 },
     { type: 'tf', prompt: 'يرى الكاتب أن الأمانة تقتصر على حفظ المال.', correct: false, points: 1 },
     { type: 'long', prompt: 'اكتب فقرة من خمسة أسطر تصف فيها موقفًا ظهرت فيه الأمانة.', points: 5 },
   ] });
-  add({ id: 'is1', title: 'سورة الملك: الآيات ١–٥ — المعاني', subject: 'islamic', teacherId: 'abdullah', classes: ['8B'], lang: 'ar', dueAt: atDay(3, 19, 0, now), instructions: 'اقرأ الآيات من ١ إلى ٥ من سورة الملك مع التفسير الميسّر، ثم أجب باختصار.', rubric: ['understanding'], blocks: [
+  add({ id: 'is1', title: 'سورة الملك: الآيات ١–٥ — المعاني', subject: 'islamic', teacherId: 'abdullah', classes: ['8B1'], lang: 'ar', dueAt: atDay(3, 19, 0, now), instructions: 'اقرأ الآيات من ١ إلى ٥ من سورة الملك مع التفسير الميسّر، ثم أجب باختصار.', rubric: ['understanding'], blocks: [
     { type: 'short', prompt: 'ما معنى «تبارك» في الآية الأولى؟', points: 2 },
     { type: 'short', prompt: 'ما الحكمة من خلق الموت والحياة كما ورد في الآية الثانية؟', points: 2 },
     { type: 'match', prompt: 'صِل كل كلمة بمعناها.', pairs: [{ left: 'تفاوت', right: 'اختلاف وعدم تناسب' }, { left: 'فطور', right: 'شقوق وصدوع' }, { left: 'خاسئًا', right: 'ذليلًا صاغرًا' }, { left: 'حسير', right: 'كليل منقطع' }], points: 4 },
   ] });
-  add({ id: 'ss1', title: 'Map of Saudi Regions', subject: 'social', teacherId: 'hassan', classes: ['8B'], dueAt: atDay(-1, 19, 0, now), latePolicy: { mode: 'until', until: atDay(2, 19, 0, now), deduct: false, pct: 10 }, instructions: 'Label all 13 administrative regions of Saudi Arabia on the blank map and colour-code them. Include a key and a compass rose.', attachments: [{ id: 'att_ss1', kind: 'worksheet', name: 'Blank map — Saudi regions.pdf' }], rubric: ['accuracy', 'presentation'], blocks: [
+  add({ id: 'ss1', title: 'Map of Saudi Regions', subject: 'social', teacherId: 'hassan', classes: ['8B1'], dueAt: atDay(-1, 19, 0, now), latePolicy: { mode: 'until', until: atDay(2, 19, 0, now), deduct: false, pct: 10 }, instructions: 'Label all 13 administrative regions of Saudi Arabia on the blank map and colour-code them. Include a key and a compass rose.', attachments: [{ id: 'att_ss1', kind: 'worksheet', name: 'Blank map — Saudi regions.pdf' }], rubric: ['accuracy', 'presentation'], blocks: [
     { type: 'file', prompt: 'Upload your labelled map (photo, scan or PDF).', points: 8 },
     { type: 'short', prompt: 'Which region is Jeddah in, and what is that region’s capital city?', points: 2 },
   ] });
-  add({ id: 'ict1', title: 'Spreadsheet Basics', subject: 'ict', teacherId: 'adel', classes: ['8B'], dueAt: atDay(-9, 19, 0, now), allowResubmit: true, instructions: 'Build a weekly budget in a spreadsheet. Use SUM for the total and AVERAGE for the daily average. Format money cells as currency.', rubric: ['accuracy', 'presentation'], blocks: [
+  add({ id: 'ict1', title: 'Spreadsheet Basics', subject: 'ict', teacherId: 'adel', classes: ['8B1'], dueAt: atDay(-9, 19, 0, now), allowResubmit: true, instructions: 'Build a weekly budget in a spreadsheet. Use SUM for the total and AVERAGE for the daily average. Format money cells as currency.', rubric: ['accuracy', 'presentation'], blocks: [
     { type: 'file', prompt: 'Upload your spreadsheet file.', points: 8 },
     { type: 'short', prompt: 'Which formula did you use to find the weekly total?', points: 2 },
   ] });
-  add({ id: 'art1', title: 'Islamic Geometric Pattern Sketch', subject: 'art', teacherId: 'lina', classes: ['8B'], dueAt: atDay(-16, 19, 0, now), sample: 'pattern', instructions: 'Using a compass and ruler, construct an eight-point star pattern. Shade it using two colours.', rubric: ['method', 'creativity', 'presentation'], blocks: [PAPER_BLOCK(10, 'Photograph your finished sketch.')] });
+  add({ id: 'art1', title: 'Islamic Geometric Pattern Sketch', subject: 'art', teacherId: 'lina', classes: ['8B1'], dueAt: atDay(-16, 19, 0, now), sample: 'pattern', instructions: 'Using a compass and ruler, construct an eight-point star pattern. Shade it using two colours.', rubric: ['method', 'creativity', 'presentation'], blocks: [PAPER_BLOCK(10, 'Photograph your finished sketch.')] });
 
   /* --- Layan (Grade 1A) --- */
-  add({ id: 'e1', title: 'Count and colour 10 apples', subject: 'math', teacherId: 'noura', classes: ['1A'], dueAt: atDay(1, 18, 0, now), instructions: 'Count 10 apples and colour them red. Then write the number 10 in the box.', attachments: [{ id: 'att_e1', kind: 'worksheet', name: 'Apples worksheet.pdf' }], rubric: ['understanding', 'presentation'], blocks: [PAPER_BLOCK(4, 'Take a photo of your coloured worksheet.')] });
-  add({ id: 'e2', title: 'حروفي: ب ت ث', subject: 'arabic', teacherId: 'hind', classes: ['1A'], lang: 'ar', dueAt: atDay(2, 18, 0, now), instructions: 'تتبّع الحروف ب ت ث، ثم اكتب كل حرف ثلاث مرات.', rubric: ['presentation'], blocks: [PAPER_BLOCK(3, 'صوّر ورقة الحروف بعد إكمالها.')] });
-  add({ id: 'e3', title: 'Living or not living?', subject: 'science', teacherId: 'noura', classes: ['1A'], dueAt: atDay(-4, 18, 0, now), instructions: 'Choose the right answer.', blocks: [
+  add({ id: 'e1', title: 'Count and colour 10 apples', subject: 'math', teacherId: 'noura', classes: ['KG2-A'], dueAt: atDay(1, 18, 0, now), instructions: 'Count 10 apples and colour them red. Then write the number 10 in the box.', attachments: [{ id: 'att_e1', kind: 'worksheet', name: 'Apples worksheet.pdf' }], rubric: ['understanding', 'presentation'], blocks: [PAPER_BLOCK(4, 'Take a photo of your coloured worksheet.')] });
+  add({ id: 'e2', title: 'حروفي: ب ت ث', subject: 'arabic', teacherId: 'hind', classes: ['KG2-A'], lang: 'ar', dueAt: atDay(2, 18, 0, now), instructions: 'تتبّع الحروف ب ت ث، ثم اكتب كل حرف ثلاث مرات.', rubric: ['presentation'], blocks: [PAPER_BLOCK(3, 'صوّر ورقة الحروف بعد إكمالها.')] });
+  add({ id: 'e3', title: 'Living or not living?', subject: 'science', teacherId: 'noura', classes: ['KG2-A'], dueAt: atDay(-4, 18, 0, now), instructions: 'Choose the right answer.', blocks: [
     { type: 'mcq', prompt: 'Which one is living?', options: ['A cat', 'A rock', 'A chair'], correct: 0, points: 1 },
     { type: 'tf', prompt: 'A tree is living.', correct: true, points: 1 },
     { type: 'mcq', prompt: 'What do plants need to grow?', options: ['Water and sunlight', 'Toys', 'Only sand'], correct: 0, points: 1 },
     { type: 'tf', prompt: 'A car is living.', correct: false, points: 1 },
   ] });
-  add({ id: 'e4', title: 'My family: draw and label', subject: 'english', teacherId: 'noura', classes: ['1A'], dueAt: atDay(3, 18, 0, now), instructions: 'Draw your family. Write a name under each person.', rubric: ['presentation'], blocks: [PAPER_BLOCK(3, 'Take a photo of your drawing.')] });
-  add({ id: 'e5', title: 'Shapes around me', subject: 'math', teacherId: 'noura', classes: ['1A'], dueAt: atDay(-11, 18, 0, now), instructions: 'Which shape is it?', blocks: [
+  add({ id: 'e4', title: 'My family: draw and label', subject: 'english', teacherId: 'noura', classes: ['KG2-A'], dueAt: atDay(3, 18, 0, now), instructions: 'Draw your family. Write a name under each person.', rubric: ['presentation'], blocks: [PAPER_BLOCK(3, 'Take a photo of your drawing.')] });
+  add({ id: 'e5', title: 'Shapes around me', subject: 'math', teacherId: 'noura', classes: ['KG2-A'], dueAt: atDay(-11, 18, 0, now), instructions: 'Which shape is it?', blocks: [
     { type: 'mcq', prompt: 'A clock face is a…', options: ['Circle', 'Square', 'Triangle'], correct: 0, points: 1 },
     { type: 'mcq', prompt: 'A door is a…', options: ['Circle', 'Rectangle', 'Triangle'], correct: 1, points: 1 },
   ] });
 
   /* --- Faisal (Grade 11A) --- */
-  add({ id: 'f1', title: 'Biology — Enzyme Practical Report', subject: 'biology', teacherId: 'khalid', classes: ['11A'], dueAt: atDay(1, 23, 59, now), instructions: 'Write up the catalase practical: aim, method, results table, a graph of rate against temperature, and an evaluation. Upload your report as PDF or DOCX.', rubric: ['method', 'evidence', 'presentation'], blocks: [
+  add({ id: 'f1', title: 'Biology — Enzyme Practical Report', subject: 'biology', teacherId: 'khalid', classes: ['11B1'], dueAt: atDay(1, 23, 59, now), instructions: 'Write up the catalase practical: aim, method, results table, a graph of rate against temperature, and an evaluation. Upload your report as PDF or DOCX.', rubric: ['method', 'evidence', 'presentation'], blocks: [
     { type: 'file', prompt: 'Upload your full practical report.', points: 14 },
     { type: 'short', prompt: 'State the optimum temperature you found, with units.', points: 2 },
     { type: 'long', prompt: 'Evaluate one significant source of error and suggest an improvement.', points: 4 },
   ] });
-  add({ id: 'f2', title: 'A-Level Maths: Differentiation', subject: 'math', teacherId: 'ahmed', classes: ['11A'], dueAt: atDay(2, 23, 59, now), instructions: 'Exercise 7B: differentiate from first principles and using the power rule. Questions 1–15. Show full working.', attachments: [{ id: 'att_f2', kind: 'worksheet', name: 'Exercise 7B — Differentiation.pdf' }], blocks: [PAPER_BLOCK(15)] });
-  add({ id: 'f3', title: 'Macbeth Act 1: Ambition', subject: 'englit', teacherId: 'rania', classes: ['11A'], dueAt: atDay(5, 23, 59, now), instructions: 'How does Shakespeare present ambition in Act 1? Refer closely to language and structure. 600–800 words.', rubric: ['understanding', 'evidence', 'language'], blocks: [{ type: 'long', prompt: 'Your essay', points: 20 }] });
-  add({ id: 'f4', title: 'Moles & Stoichiometry Quiz', subject: 'chemistry', teacherId: 'tariq', classes: ['11A'], dueAt: atDay(-5, 23, 59, now), instructions: 'Five questions. Marked automatically.', blocks: [
+  add({ id: 'f2', title: 'A-Level Maths: Differentiation', subject: 'math', teacherId: 'ahmed', classes: ['11B1'], dueAt: atDay(2, 23, 59, now), instructions: 'Exercise 7B: differentiate from first principles and using the power rule. Questions 1–15. Show full working.', attachments: [{ id: 'att_f2', kind: 'worksheet', name: 'Exercise 7B — Differentiation.pdf' }], blocks: [PAPER_BLOCK(15)] });
+  add({ id: 'f3', title: 'Macbeth Act 1: Ambition', subject: 'englit', teacherId: 'rania', classes: ['11B1'], dueAt: atDay(5, 23, 59, now), instructions: 'How does Shakespeare present ambition in Act 1? Refer closely to language and structure. 600–800 words.', rubric: ['understanding', 'evidence', 'language'], blocks: [{ type: 'long', prompt: 'Your essay', points: 20 }] });
+  add({ id: 'f4', title: 'Moles & Stoichiometry Quiz', subject: 'chemistry', teacherId: 'tariq', classes: ['11B1'], dueAt: atDay(-5, 23, 59, now), instructions: 'Five questions. Marked automatically.', blocks: [
     { type: 'mcq', prompt: 'How many moles are in 36 g of water (Mr = 18)?', options: ['2 mol', '0.5 mol', '18 mol', '36 mol'], correct: 0, points: 4 },
     { type: 'mcq', prompt: 'Avogadro’s constant is approximately…', options: ['6.02 × 10²³ mol⁻¹', '3.00 × 10⁸ mol⁻¹', '1.60 × 10⁻¹⁹ mol⁻¹', '9.81 mol⁻¹'], correct: 0, points: 4 },
     { type: 'mcq', prompt: 'What is the Mr of CO₂ (C = 12, O = 16)?', options: ['28', '44', '32', '40'], correct: 1, points: 4 },
     { type: 'mcq', prompt: '2H₂ + O₂ → 2H₂O. How many moles of water form from 3 mol of H₂?', options: ['1.5', '3', '6', '2'], correct: 1, points: 4 },
     { type: 'tf', prompt: 'One mole of any gas occupies about 24 dm³ at room temperature and pressure.', correct: true, points: 4 },
   ] });
-  add({ id: 'f5', title: 'Kinematics Problem Set', subject: 'physics', teacherId: 'huda', classes: ['11A'], dueAt: atDay(-1, 23, 59, now), latePolicy: { mode: 'accept', until: null, deduct: true, pct: 10 }, instructions: 'SUVAT problems 1–8. Show the equation you choose and your substitution.', blocks: [PAPER_BLOCK(16)] });
-  add({ id: 'f6', title: 'مقال: أثر التقنية في حياتنا', subject: 'arabic', teacherId: 'mona', classes: ['11A'], lang: 'ar', dueAt: atDay(-14, 23, 59, now), instructions: 'اكتب مقالًا من ثلاث فقرات عن أثر التقنية في حياة الشباب، مع مقدمة وخاتمة.', rubric: ['content', 'language'], blocks: [{ type: 'long', prompt: 'المقال', points: 15 }] });
+  add({ id: 'f5', title: 'Kinematics Problem Set', subject: 'physics', teacherId: 'huda', classes: ['11B1'], dueAt: atDay(-1, 23, 59, now), latePolicy: { mode: 'accept', until: null, deduct: true, pct: 10 }, instructions: 'SUVAT problems 1–8. Show the equation you choose and your substitution.', blocks: [PAPER_BLOCK(16)] });
+  add({ id: 'f6', title: 'مقال: أثر التقنية في حياتنا', subject: 'arabic', teacherId: 'mona', classes: ['11B1'], lang: 'ar', dueAt: atDay(-14, 23, 59, now), instructions: 'اكتب مقالًا من ثلاث فقرات عن أثر التقنية في حياة الشباب، مع مقدمة وخاتمة.', rubric: ['content', 'language'], blocks: [{ type: 'long', prompt: 'المقال', points: 15 }] });
 
   /* --- submissions --- */
   const put = (aid, sid, o) => { S[subKey(aid, sid)] = { id: uid('sub'), assignmentId: aid, studentId: sid, answers: {}, annotations: {}, rubricScores: {}, comment: '', note: '', history: [], ...o }; };
@@ -1316,8 +1049,8 @@ function buildSeed(now = Date.now()) {
         // grading state
         let status = 'returned';
         if (aid === 'm5') {
-          if (cls === '8B' && (isOmar || (rank >= 0 && rank < 5))) status = 'graded';
-          if (cls === '8A' && rank < 7) status = 'submitted';
+          if (cls === '8B1' && (isOmar || (rank >= 0 && rank < 5))) status = 'submitted';
+          if (cls === '8B2' && rank < 7) status = 'submitted';
         }
         if (status !== 'submitted') {
           const auto = autoScore(a, sub.answers);
@@ -1478,10 +1211,17 @@ const teacherName = (id, lang) => (TEACHERS[id] ? TEACHERS[id][lang === 'ar' ? '
 const teacherShort = (id, lang) => { const x = TEACHERS[id]; if (!x) return id; return lang === 'ar' ? (x.shortAr || x.ar) : (x.shortEn || x.en); };
 const studentName = (s, lang) => (s ? (lang === 'ar' ? s.ar : s.en) : '');
 const studentFirst = (s, lang) => (s ? (lang === 'ar' ? s.firstAr : s.firstEn) : '');
+const toArDigits = (x) => String(x).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
+/** Short labels are the school's own codes (8B1, 8G2, KG2-A) in both languages; long labels spell them out. */
 function clsLabel(code, lang, long = false) {
-  const { g, s } = parseCls(code);
-  if (lang === 'ar') return long ? `الصف ${GRADE_AR[g] || g} – الشعبة ${SEC_AR[s] || s}` : `${GRADE_AR[g] || g} ${SEC_AR[s] || s}`;
-  return long ? `Grade ${code}` : code;
+  if (!long) return code;
+  const p = parseCls(code);
+  if (lang === 'ar') {
+    if (p.kg) return `الروضة ${KG_AR[p.level] || p.level} – الشعبة ${SEC_AR[p.s] || p.s}`;
+    return `الصف ${GRADE_AR[p.g] || p.g} – ${p.gender === 'G' ? 'بنات' : 'بنين'} ${toArDigits(p.n)} (${code})`;
+  }
+  if (p.kg) return code;
+  return `Grade ${code}`;
 }
 const clsList = (codes, lang) => codes.map((c) => clsLabel(c, lang)).join(lang === 'ar' ? '، ' : ', ');
 const tint = (hex, a = '1A') => `${hex}${a}`;
@@ -1676,27 +1416,6 @@ function Modal({ open, onClose, title, children, footer, size = 'md', icon: I })
   );
 }
 
-function PageHeader({ title, subtitle, actions, onBack, backLabel, eyebrow }) {
-  const { t } = useApp();
-  return (
-    <div className="mb-6">
-      {onBack && (
-        <button type="button" onClick={onBack} className="btn btn-ghost btn-sm -ms-2 mb-2">
-          <ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{backLabel || t('back')}
-        </button>
-      )}
-      <div className="flex flex-wrap items-end gap-3 justify-between">
-        <div className="min-w-0">
-          {eyebrow && <div className="mb-1">{eyebrow}</div>}
-          <h1 className="text-2xl sm:text-[1.7rem] font-bold text-ags-navy leading-tight"><bdi>{title}</bdi></h1>
-          {subtitle && <p className="text-ags-slate mt-1">{subtitle}</p>}
-        </div>
-        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
-      </div>
-    </div>
-  );
-}
-
 function StatCard({ icon: I, label, value, tone = 'indigo', hint, onClick, size = 'md' }) {
   const tones = { indigo: 'bg-ags-indigo-50 text-ags-indigo', gold: 'bg-ags-gold-100 text-ags-navy', amber: 'bg-amber-50 text-amber-700', green: 'bg-emerald-50 text-emerald-700', red: 'bg-rose-50 text-rose-700', grey: 'bg-slate-100 text-slate-600' };
   const Tag = onClick ? 'button' : 'div';
@@ -1721,17 +1440,6 @@ function EmptyState({ icon: I = Inbox, title, body, action }) {
       <p className="font-medium text-ags-navy">{title}</p>
       {body && <p className="text-sm text-ags-slate mt-1">{body}</p>}
       {action && <div className="mt-4">{action}</div>}
-    </div>
-  );
-}
-
-function SectionTitle({ icon: I, title, count, right, id, tone }) {
-  return (
-    <div className="flex items-center gap-2.5 mb-3" id={id}>
-      {I && <I aria-hidden="true" className={cx('w-5 h-5', tone || 'text-ags-indigo')} />}
-      <h2 className="text-lg font-bold text-ags-navy">{title}</h2>
-      {count != null && <span className="text-xs font-bold tabular bg-ags-indigo-50 text-ags-indigo rounded-full px-2 py-0.5">{count}</span>}
-      <div className="ms-auto">{right}</div>
     </div>
   );
 }
@@ -1797,596 +1505,8 @@ function SuccessCheck({ early = false }) {
   );
 }
 
-/* ============================================================================
- * 9. SHELL
- * ========================================================================== */
 
-function Wordmark() {
-  const { t } = useApp();
-  return (
-    <div className="flex items-center gap-2.5 shrink-0">
-      <span className="bg-ags-navy text-ags-gold font-bold tracking-widest rounded-lg px-2.5 py-1 text-lg leading-none ring-1 ring-white/10" dir="ltr">AGS</span>
-      <span className="font-medium text-white text-[1.05rem] leading-tight hidden min-[380px]:inline">{t('app.name')}</span>
-    </div>
-  );
-}
-
-function LangToggle({ compact }) {
-  const { lang, setLang, t } = useApp();
-  return (
-    <div role="group" aria-label={t('lang.label')} className="inline-flex rounded-lg bg-ags-navy/70 ring-1 ring-white/10 p-0.5">
-      {[['en', 'EN', 'English'], ['ar', 'ع', 'العربية']].map(([code, short, full]) => (
-        <button key={code} type="button" lang={code} aria-pressed={lang === code} aria-label={full} onClick={() => setLang(code)}
-          className={cx('min-w-[2.4rem] min-h-[2.2rem] px-2 rounded-md text-sm font-bold transition-colors', lang === code ? 'bg-ags-gold text-ags-navy' : 'text-white/85 hover:bg-white/10')}>
-          {compact ? short : short}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function RoleSwitcher({ full }) {
-  const { role, setRole, t } = useApp();
-  return (
-    <Segmented dark full={full} size={full ? 'md' : 'lg'} ariaLabel={t('role.label')} value={role} onChange={setRole}
-      options={[
-        { value: 'student', label: t('role.student'), icon: GraduationCap },
-        { value: 'teacher', label: t('role.teacher'), icon: Presentation },
-        { value: 'admin', label: t('role.admin'), icon: Building2 },
-      ]} />
-  );
-}
-
-function TopBar({ onOpenSettings, onReset }) {
-  const { t, role, lang, student } = useApp();
-  const who = role === 'student' ? studentName(student, lang) : role === 'teacher' ? teacherName('sarah', lang) : t('ad.user');
-  return (
-    <header className="on-dark sticky top-0 z-50 bg-ags-indigo text-white shadow-[0_2px_12px_rgba(32,31,60,.25)]">
-      <div className="flex items-center gap-3 px-3 sm:px-5 h-16">
-        <Wordmark />
-        <div className="hidden md:flex flex-1 justify-center items-center gap-3">
-          <span className="text-xs text-white/75 hidden xl:inline">{t('role.label')}</span>
-          <RoleSwitcher />
-        </div>
-        <div className="ms-auto md:ms-0 flex items-center gap-1.5 sm:gap-2">
-          <LangToggle />
-          <button type="button" onClick={onReset} className="btn btn-sm hidden sm:inline-flex text-white/90 hover:bg-white/10 ring-1 ring-white/15">
-            <RotateCcw aria-hidden="true" className="w-4 h-4" /><span className="hidden lg:inline">{t('demo.reset')}</span><span className="sr-only lg:hidden">{t('demo.reset')}</span>
-          </button>
-          <button type="button" onClick={onOpenSettings} className="btn btn-icon text-white/90 hover:bg-white/10" aria-label={t('settings')}><Settings aria-hidden="true" className="w-5 h-5" /></button>
-          <div className="hidden 2xl:flex items-center gap-2 ps-2 border-s border-white/15">
-            <Avatar name={who} size="sm" tone="gold" />
-            <span className="text-sm text-white/90 max-w-[12rem] truncate">{who}</span>
-          </div>
-        </div>
-      </div>
-      <div className="md:hidden px-3 pb-3"><RoleSwitcher full /></div>
-    </header>
-  );
-}
-
-function AgePreviewBar() {
-  const { t, stage, setStage } = useApp();
-  return (
-    <div className="bg-ags-gold-50 border-b border-amber-200/70">
-      <div className="px-3 sm:px-5 py-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex items-center gap-2 text-ags-navy">
-          <Eye aria-hidden="true" className="w-4 h-4" />
-          <span className="text-sm font-bold">{t('stage.label')}</span>
-          <span className="text-xs text-ags-slate hidden sm:inline">· {t('stage.hint')}</span>
-        </div>
-        <div className="scroll-x max-w-full">
-          <Segmented size="sm" ariaLabel={t('stage.label')} value={stage} onChange={setStage}
-            options={[{ value: 'early', label: t('stage.early') }, { value: 'middle', label: t('stage.middle') }, { value: 'senior', label: t('stage.senior') }]} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function useNavItems() {
-  const { role, db, now } = useApp();
-  return useMemo(() => {
-    if (role === 'student') return [{ id: 'home', icon: LayoutDashboard, label: 'nav.home' }, { id: 'all', icon: ClipboardList, label: 'nav.assignments' }];
-    if (role === 'teacher') {
-      let toGrade = 0;
-      teacherAssignments(db).forEach((a) => { if (isPublished(a, now)) a.classes.forEach((c) => { toGrade += classStats(db, a, c, now).toGrade; }); });
-      return [
-        { id: 'home', icon: LayoutDashboard, label: 'nav.dashboard' },
-        { id: 'assignments', icon: ClipboardList, label: 'nav.assignments' },
-        { id: 'create', icon: PlusCircle, label: 'nav.create' },
-        { id: 'grading', icon: Inbox, label: 'nav.grading', badge: toGrade },
-        { id: 'insights', icon: BarChart3, label: 'nav.insights' },
-      ];
-    }
-    return [{ id: 'home', icon: School, label: 'nav.overview' }];
-  }, [role, db, now]);
-}
-const NAV_OF_ROUTE = { home: 'home', all: 'all', assignment: 'home', paper: 'home', assignments: 'assignments', create: 'create', grading: 'grading', submissions: 'grading', grade: 'grading', insights: 'insights' };
-
-function Sidebar() {
-  const { t, route, navigate, role, lang, student } = useApp();
-  const items = useNavItems();
-  const active = NAV_OF_ROUTE[route.name] || 'home';
-  const who = role === 'student' ? studentName(student, lang) : role === 'teacher' ? teacherName('sarah', lang) : t('ad.user');
-  const sub = role === 'student' ? clsLabel(student.cls, lang, true) : role === 'teacher' ? `${subjName('math', lang)} · ${clsList(SARAH_CLASSES, lang)}` : t('ad.scope');
-  return (
-    <aside className="on-dark hidden lg:flex w-64 shrink-0 flex-col bg-ags-navy text-white sticky top-16 self-start" style={{ height: 'calc(100vh - 4rem)' }}>
-      <nav aria-label={t('nav.main')} className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
-        {items.map((it) => {
-          const I = it.icon; const on = active === it.id;
-          return (
-            <button key={it.id} type="button" onClick={() => navigate({ name: it.id })} aria-current={on ? 'page' : undefined}
-              className={cx('w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.95rem] transition-colors border-s-4',
-                on ? 'bg-white/10 text-white border-ags-gold font-medium' : 'border-transparent text-white/80 hover:bg-white/5 hover:text-white')}>
-              <I aria-hidden="true" className={cx('w-5 h-5', on && 'text-ags-gold')} />
-              <span className="flex-1 text-start">{t(it.label)}</span>
-              {!!it.badge && <span className="text-xs font-bold bg-ags-gold text-ags-navy rounded-full px-2 py-0.5 tabular">{it.badge}</span>}
-            </button>
-          );
-        })}
-      </nav>
-      <div className="p-4 border-t border-white/10">
-        <div className="flex items-center gap-3">
-          <Avatar name={who} tone="gold" />
-          <div className="min-w-0">
-            <p className="text-sm font-medium truncate">{who}</p>
-            <p className="text-xs text-white/70 truncate">{sub}</p>
-          </div>
-        </div>
-        <p className="mt-4 text-[0.72rem] leading-snug text-white/65">{t('app.school')} · {t('app.city')}</p>
-      </div>
-    </aside>
-  );
-}
-
-function BottomNav() {
-  const { t, route, navigate } = useApp();
-  const items = useNavItems();
-  if (items.length < 2) return null;
-  const active = NAV_OF_ROUTE[route.name] || 'home';
-  return (
-    <nav aria-label={t('nav.main')} className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_16px_rgba(32,31,60,.06)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <div className="flex">
-        {items.map((it) => {
-          const I = it.icon; const on = active === it.id;
-          return (
-            <button key={it.id} type="button" onClick={() => navigate({ name: it.id })} aria-current={on ? 'page' : undefined}
-              className={cx('relative flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 text-[0.7rem] min-h-[3.75rem]', on ? 'text-ags-indigo font-bold' : 'text-ags-slate')}>
-              {on && <span className="absolute top-0 inset-x-6 h-1 rounded-b bg-ags-gold" aria-hidden="true" />}
-              <span className="relative">
-                <I aria-hidden="true" className="w-5 h-5" />
-                {!!it.badge && <span className="absolute -top-1.5 -end-3 text-[0.62rem] font-bold bg-ags-gold text-ags-navy rounded-full px-1.5 tabular">{it.badge}</span>}
-              </span>
-              <span className="leading-tight text-center">{t(it.label)}</span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
-
-function Footer({ onAbout }) {
-  const { t } = useApp();
-  return (
-    <footer className="mt-12 pt-5 border-t border-slate-200 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-ags-slate">
-      <span className="font-bold text-ags-indigo" dir="ltr">AGS</span>
-      <span>{t('app.name')}</span>
-      <span aria-hidden="true">·</span>
-      <button type="button" onClick={onAbout} className="inline-flex items-center gap-1.5 rounded-full bg-ags-gold-50 ring-1 ring-amber-200 px-2.5 py-1 text-ags-navy hover:bg-ags-gold-100">
-        <Info aria-hidden="true" className="w-3.5 h-3.5" />{t('demo.footer')}
-      </button>
-    </footer>
-  );
-}
-
-function DemoGuide() {
-  const { t, guide, setGuide, guideGo } = useApp();
-  const done = [1, 2, 3, 4, 5, 6].filter((i) => guide.steps[i]).length;
-  const nextStep = [1, 2, 3, 4, 5, 6].find((i) => !guide.steps[i]);
-  if (!guide.open) {
-    return (
-      <button type="button" onClick={() => setGuide((g) => ({ ...g, open: true }))}
-        key={done} className={cx('fixed z-40 bottom-[5.25rem] lg:bottom-5 end-4 btn btn-gold shadow-lg rounded-full', done > 0 && 'ags-flash')}>
-        <Sparkles aria-hidden="true" className="w-4 h-4" />{t('guide.title')}
-        <span className="text-xs font-bold bg-ags-navy text-ags-gold rounded-full px-1.5 tabular">{t('guide.progress', { n: done })}</span>
-        {nextStep && <span className="hidden sm:inline text-xs font-medium">· {t('guide.next', { n: nextStep })}</span>}
-      </button>
-    );
-  }
-  return (
-    <aside aria-label={t('guide.title')} className="fixed z-40 bottom-[5.25rem] lg:bottom-5 end-4 w-[min(22rem,calc(100vw-2rem))] card shadow-2xl ags-fade-up overflow-hidden">
-      <div className="bg-ags-navy text-white px-4 py-3 flex items-center gap-2 on-dark">
-        <Sparkles aria-hidden="true" className="w-4 h-4 text-ags-gold" />
-        <h2 className="font-bold text-sm flex-1">{t('guide.title')}</h2>
-        <span className="text-xs text-white/80 tabular">{t('guide.progress', { n: done })}</span>
-        <button type="button" className="btn btn-icon text-white/85 hover:bg-white/10 !min-h-0 !min-w-0 w-8 h-8" onClick={() => setGuide((g) => ({ ...g, open: false }))} aria-label={t('guide.hide')}><X aria-hidden="true" className="w-4 h-4" /></button>
-      </div>
-      <ProgressBar value={done} max={6} tone="gold" height="h-1" className="rounded-none" label={t('guide.title')} />
-      <ol className="p-2.5 space-y-0.5 max-h-[50vh] overflow-y-auto">
-        {[1, 2, 3, 4, 5, 6].map((i) => {
-          const ok = guide.steps[i]; const current = i === nextStep;
-          return (
-            <li key={i} className={cx('flex items-start gap-2.5 rounded-xl px-2 py-1.5', ok ? 'bg-emerald-50/70' : current ? 'bg-ags-gold-50 ring-1 ring-amber-200' : 'hover:bg-slate-50')}>
-              <span aria-hidden="true" className={cx('mt-0.5 w-6 h-6 rounded-full shrink-0 inline-flex items-center justify-center text-xs font-bold', ok ? 'bg-emerald-600 text-white' : 'bg-ags-indigo-50 text-ags-indigo')}>
-                {ok ? <Check className="w-3.5 h-3.5" /> : i}
-              </span>
-              <span className={cx('text-[0.8rem] leading-snug flex-1 min-w-0', ok ? 'text-emerald-900' : 'text-ags-navy', !current && 'line-clamp-1')}>
-                <span className="sr-only">{ok ? `${t('guide.done')}: ` : ''}</span>{t(`guide.s${i}`)}
-              </span>
-              <button type="button" className="btn btn-sm btn-ghost !min-h-[2rem] px-2" onClick={() => guideGo(i)} aria-label={`${t('guide.go')} — ${i}`}>
-                {t('guide.go')}<ArrowRight aria-hidden="true" className="w-3.5 h-3.5 flip-rtl" />
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-    </aside>
-  );
-}
-
-function SettingsModal({ open, onClose, onReset, onAbout }) {
-  const { t, settings, setSettings, lang, setLang, guide, setGuide } = useApp();
-  return (
-    <Modal open={open} onClose={onClose} title={t('settings')} icon={Settings} size="sm"
-      footer={<button type="button" className="btn btn-primary" onClick={onClose}>{t('close')}</button>}>
-      <div className="space-y-6">
-        <div>
-          <p className="label">{t('settings.textSize')}</p>
-          <Segmented full ariaLabel={t('settings.textSize')} value={settings.textSize} onChange={(v) => setSettings((s) => ({ ...s, textSize: v }))}
-            options={[{ value: 's', label: t('settings.size.s') }, { value: 'm', label: t('settings.size.m') }, { value: 'l', label: t('settings.size.l') }, { value: 'xl', label: t('settings.size.xl') }]} />
-          <p className="hint mt-2">{t('settings.preview')}</p>
-        </div>
-        <div>
-          <p className="label">{t('lang.label')}</p>
-          <Segmented full ariaLabel={t('lang.label')} value={lang} onChange={setLang} options={[{ value: 'en', label: 'English' }, { value: 'ar', label: 'العربية' }]} />
-        </div>
-        <Switch checked={settings.reduceMotion} onChange={(v) => setSettings((s) => ({ ...s, reduceMotion: v }))} label={t('settings.motion')} hint={t('settings.motion.hint')} />
-        <Switch checked={guide.open} onChange={(v) => setGuide((g) => ({ ...g, open: v }))} label={t('settings.guide')} />
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => { onClose(); onReset(); }}><RotateCcw aria-hidden="true" className="w-4 h-4" />{t('demo.reset')}</button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { onClose(); onAbout(); }}><Info aria-hidden="true" className="w-4 h-4" />{t('demo.about')}</button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/* ============================================================================
- * 10. STUDENT VIEWS
- * ========================================================================== */
-
-function useStudentItems() {
-  const { db, student, now } = useApp();
-  return useMemo(() => Object.values(db.assignments)
-    .filter((a) => isVisibleToStudent(a, student, now))
-    .map((a) => { const sub = db.submissions[subKey(a.id, student.id)]; return { a, sub, st: studentState(a, sub, now) }; }), [db, student, now]);
-}
-
-function latePolicyText(t, fmt, a) {
-  const p = a.latePolicy || {};
-  let s = p.mode === 'until' && p.until ? t('late.policy.until', { date: fmt.dateTime(p.until) }) : t(`late.policy.${p.mode || 'accept'}`);
-  if (p.deduct && p.mode !== 'none') s += ` ${t('late.deduct', { pct: fmt.pct((p.pct || 0) / 100) })}.`;
-  return s;
-}
-function lateLine(t, fmt, a, now) {
-  const p = a.latePolicy || {};
-  if (p.mode === 'none') return t('late.closed');
-  const open = p.mode !== 'until' || (p.until && now <= p.until);
-  const base = p.mode === 'until' ? (open ? t('late.acceptUntil', { date: fmt.date(p.until) }) : t('late.closed')) : t('late.accept');
-  return open && p.deduct ? `${base} · ${t('late.deduct', { pct: fmt.pct((p.pct || 0) / 100) })}` : base;
-}
-
-function AssignmentCard({ item }) {
-  const { t, fmt, lang, stage, now, navigate } = useApp();
-  const { a, sub, st } = item;
-  const open = () => navigate({ name: 'assignment', id: a.id });
-  const type = submissionType(a); const TI = TYPE_ICON[type];
-  const color = SUBJECTS[a.subject]?.color;
-  const isRet = st === 'returned' || st === 'revision';
-  const isOver = st === 'overdue' || st === 'closed';
-  const isDone = ['submitted', 'submittedLate'].includes(st);
-  const isNew = st === 'notStarted' && now - a.publishAt < DAY;
-  const due = isOver ? `${t('due.was', { when: fmt.date(a.dueAt) })} · ${t('late.days', { n: lateDays(a.dueAt, now) })}` : dueLabel(t, fmt, a.dueAt, now);
-  const markPill = isRet && typeof sub?.mark === 'number' ? (
-    <span className="inline-flex items-baseline gap-1 rounded-lg bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 px-2.5 py-1 font-bold tabular">{fmt.score(sub.mark, a.points)}</span>
-  ) : null;
-
-  if (stage === 'early') {
-    const dd = Math.round((startOfDay(a.dueAt) - startOfDay(now)) / DAY);
-    const when = dd === 0 ? t('due.early.today') : dd === 1 ? t('due.early.tomorrow') : fmt.weekday(a.dueAt);
-    return (
-      <button type="button" onClick={open} className="card w-full text-start p-5 flex items-center gap-5 hover:shadow-lg transition-shadow min-h-[7.5rem]">
-        <SubjectArt code={a.subject} />
-        <span className="flex-1 min-w-0">
-          <span className="block text-sm font-medium" style={{ color }}>{subjName(a.subject, lang)}</span>
-          <span className="block text-xl font-bold text-ags-navy leading-snug mt-0.5"><bdi>{a.title}</bdi>{isNew && <span className="ms-2 align-middle text-xs font-bold rounded-full bg-ags-gold text-ags-navy px-2 py-0.5">{t('card.new')}</span>}</span>
-          <span className="mt-2 flex flex-wrap items-center gap-2">
-            {!isRet && !isDone && <span className="inline-flex items-center gap-1.5 text-base text-ags-slate"><CalendarDays aria-hidden="true" className="w-5 h-5" />{isOver ? t('st.overdue') : when}</span>}
-            <StatusChip status={st} size="lg" />
-            {markPill}
-          </span>
-        </span>
-        <ChevronRight aria-hidden="true" className="w-7 h-7 text-ags-slate flip-rtl shrink-0" />
-      </button>
-    );
-  }
-
-  if (stage === 'senior') {
-    return (
-      <button type="button" onClick={open} className="w-full text-start px-4 py-3 grid grid-cols-[1fr_auto] sm:grid-cols-[9rem_1fr_auto_auto] items-center gap-x-4 gap-y-1 hover:bg-ags-indigo-50/50 transition-colors">
-        <span className="hidden sm:block"><SubjectTag code={a.subject} /></span>
-        <span className="min-w-0">
-          <span className="block font-medium text-ags-navy truncate">{isNew && <span className="me-2 text-[0.65rem] font-bold rounded bg-ags-gold text-ags-navy px-1.5 py-0.5">{t('card.new')}</span>}<bdi>{a.title}</bdi></span>
-          <span className="block text-xs text-ags-slate truncate">
-            <span className="sm:hidden">{subjName(a.subject, lang)} · </span>{teacherName(a.teacherId, lang)} · {t(`type.${type}`)} · {t('pts', { n: a.points })}
-          </span>
-          {isOver && <span className="block text-xs text-amber-800 mt-0.5">{lateLine(t, fmt, a, now)}</span>}
-        </span>
-        <span className="hidden sm:block text-sm text-ags-slate tabular text-end">{isRet && sub?.returnedAt ? agoLabel(t, sub.returnedAt, now) : due}</span>
-        <span className="flex items-center gap-2 justify-end">{markPill}<StatusChip status={st} size="sm" /></span>
-        <span className="sm:hidden col-span-2 text-xs text-ags-slate tabular">{due}</span>
-      </button>
-    );
-  }
-
-  return (
-    <button type="button" onClick={open}
-      className={cx('card group w-full text-start p-4 sm:p-5 flex gap-4 items-start relative overflow-hidden hover:shadow-lg transition-shadow', isOver && 'ring-1 ring-amber-200')}>
-      <span aria-hidden="true" className="absolute inset-y-0 start-0 w-1.5" style={{ background: color }} />
-      <SubjectBadge code={a.subject} />
-      <span className="flex-1 min-w-0">
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <SubjectTag code={a.subject} />
-          <span className="text-xs text-ags-slate">· {teacherName(a.teacherId, lang)}</span>
-        </span>
-        <span className="block font-bold text-ags-navy text-[1.05rem] mt-1 leading-snug"><bdi>{a.title}</bdi>{isNew && <span className="ms-2 align-middle text-[0.68rem] font-bold rounded-full bg-ags-gold text-ags-navy px-2 py-0.5">{t('card.new')}</span>}</span>
-        <span className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ags-slate">
-          {!isRet && <span className="inline-flex items-center gap-1.5"><Clock aria-hidden="true" className="w-4 h-4" />{isDone && sub?.submittedAt ? `${t('st.submitted')} · ${agoLabel(t, sub.submittedAt, now)}` : due}</span>}
-          {isRet && sub?.returnedAt && <span className="inline-flex items-center gap-1.5"><CheckCircle2 aria-hidden="true" className="w-4 h-4" />{t('fb.returnedOn', { when: agoLabel(t, sub.returnedAt, now) })}</span>}
-          <span className="inline-flex items-center gap-1.5"><TI aria-hidden="true" className="w-4 h-4" />{t(`type.${type}`)}</span>
-        </span>
-        {isOver && <span className="mt-2 inline-flex items-center gap-1.5 text-sm text-amber-900 bg-amber-50 rounded-lg px-2 py-1"><Info aria-hidden="true" className="w-4 h-4" />{lateLine(t, fmt, a, now)}</span>}
-        {isRet && sub?.comment && <span className="mt-2 block text-sm text-ags-navy/90 bg-slate-50 rounded-lg px-3 py-2 line-clamp-2" dir="auto"><MessageSquareText aria-hidden="true" className="inline w-4 h-4 me-1.5 text-ags-indigo" />{sub.comment}</span>}
-      </span>
-      <span className="flex flex-col items-end gap-2 shrink-0">
-        <StatusChip status={st} />
-        {markPill}
-        {st === 'revision' && <span className="text-xs font-medium text-ags-indigo inline-flex items-center gap-1">{t('resubmit')}<ArrowRight aria-hidden="true" className="w-3.5 h-3.5 flip-rtl" /></span>}
-        <ChevronRight aria-hidden="true" className="w-5 h-5 text-slate-400 group-hover:text-ags-indigo flip-rtl mt-auto" />
-      </span>
-    </button>
-  );
-}
-
-function CardList({ items, emptyText, emptyIcon }) {
-  const { stage, t } = useApp();
-  if (!items.length) return <div className="card"><EmptyState icon={emptyIcon || CheckCircle2} title={emptyText || t('empty.filter')} /></div>;
-  if (stage === 'senior') return <div className="card divide-y divide-slate-100 overflow-hidden">{items.map((x) => <AssignmentCard key={x.a.id} item={x} />)}</div>;
-  return <div className={cx('grid gap-3', stage === 'early' ? 'sm:grid-cols-2 gap-4' : '')}>{items.map((x) => <AssignmentCard key={x.a.id} item={x} />)}</div>;
-}
-
-function WeekStrip({ items, day, setDay }) {
-  const { t, fmt, now } = useApp();
-  const days = Array.from({ length: 7 }, (_, i) => startOfDay(now) + i * DAY + 2 * HOUR);
-  return (
-    <div className="card p-3 sm:p-4">
-      <div className="flex items-center justify-between mb-2.5">
-        <h2 className="text-sm font-bold text-ags-navy inline-flex items-center gap-2"><CalendarDays aria-hidden="true" className="w-4 h-4 text-ags-indigo" />{t('week.next')}</h2>
-        {day && <button type="button" className="btn btn-ghost btn-sm !min-h-[2rem]" onClick={() => setDay(null)}>{t('week.clear')}</button>}
-      </div>
-      <div className="grid grid-cols-7 gap-1.5">
-        {days.map((d, i) => {
-          const ymd = toYMD(d);
-          const due = items.filter((x) => toYMD(x.a.dueAt) === ymd);
-          const wk = isWeekend(d); const sel = day === ymd;
-          return (
-            <button key={ymd} type="button" aria-pressed={sel} onClick={() => setDay(sel ? null : ymd)} disabled={!due.length && !sel}
-              aria-label={`${fmt.weekday(d)} ${fmt.dateNoWd(d)} — ${due.length ? t('week.count', { n: due.length }) : wk ? t('week.weekend') : t('week.none')}`}
-              className={cx('rounded-xl py-2 px-1 flex flex-col items-center gap-1 transition-colors border disabled:opacity-100 disabled:cursor-default',
-                sel ? 'bg-ags-indigo text-white border-ags-indigo' : i === 0 ? 'border-ags-gold bg-ags-gold-50' : 'border-transparent hover:bg-ags-indigo-50',
-                wk && !sel && 'opacity-60')}>
-              <span className={cx('text-[0.7rem] font-medium', sel ? 'text-white/90' : 'text-ags-slate')}>{i === 0 ? t('week.today') : fmt.weekdayShort(d)}</span>
-              <span className="text-base font-bold tabular leading-none">{fmt.dayNum(d)}</span>
-              <span className="flex gap-0.5 h-2 items-center" aria-hidden="true">
-                {due.slice(0, 4).map((x) => <span key={x.a.id} className="w-1.5 h-1.5 rounded-full" style={{ background: sel ? '#fff' : SUBJECTS[x.a.subject]?.color }} />)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function StudentDashboard() {
-  const { t, fmt, lang, stage, student, now, db, navigate, actions } = useApp();
-  const items = useStudentItems();
-  const [subject, setSubject] = useState('all');
-  const [day, setDay] = useState(null);
-  const [showDone, setShowDone] = useState(false);
-  useEffect(() => { setSubject('all'); setDay(null); }, [student.id]);
-
-  const f = items.filter((x) => subject === 'all' || x.a.subject === subject);
-  const isOpenSt = (x) => ['notStarted', 'draft'].includes(x.st) && (x.a.dueAt >= now || x.sub?.resubmitting);
-  const dueSoonAll = f.filter(isOpenSt).sort((p, q) => p.a.dueAt - q.a.dueAt || q.a.publishAt - p.a.publishAt);
-  const dueSoon = day ? dueSoonAll.filter((x) => toYMD(x.a.dueAt) === day) : dueSoonAll;
-  const overdue = f.filter((x) => ['overdue', 'closed'].includes(x.st) && now - x.a.dueAt < 21 * DAY).sort((p, q) => q.a.dueAt - p.a.dueAt);
-  const returned = f.filter((x) => x.st === 'revision' || (x.st === 'returned' && now - (x.sub.returnedAt || 0) < 10 * DAY)).sort((p, q) => (q.sub.returnedAt || 0) - (p.sub.returnedAt || 0));
-  const completed = f.filter((x) => ['submitted', 'submittedLate'].includes(x.st) || (x.st === 'returned' && !returned.includes(x))).sort((p, q) => (q.sub.submittedAt || 0) - (p.sub.submittedAt || 0));
-
-  const all = items;
-  const cDue = all.filter((x) => isOpenSt(x) && x.a.dueAt <= now + 7 * DAY).length;
-  const cOver = all.filter((x) => ['overdue', 'closed'].includes(x.st) && now - x.a.dueAt < 21 * DAY).length;
-  const cSub = all.filter((x) => ['submitted', 'submittedLate'].includes(x.st)).length;
-  const cRet = all.filter((x) => x.st === 'revision' || (x.st === 'returned' && now - (x.sub.returnedAt || 0) < 10 * DAY)).length;
-
-  const wk0 = schoolWeekStart(now); const wk1 = wk0 + 7 * DAY;
-  const thisWeek = all.filter((x) => x.a.dueAt >= wk0 && x.a.dueAt < wk1);
-  const weekDone = thisWeek.filter((x) => !['notStarted', 'draft', 'overdue', 'closed'].includes(x.st));
-  const weekLeft = thisWeek.length - weekDone.length;
-  const allOnTime = thisWeek.length > 0 && weekLeft === 0 && weekDone.every((x) => !x.sub?.late);
-  const next = dueSoonAll[0];
-  const enc = !thisWeek.length ? t('enc.none') : allOnTime ? t.s('enc.allOnTime', stage)
-    : weekLeft > 0 && weekDone.length === 0 && stage !== 'senior' ? t.s('enc.start', stage, { n: weekLeft })
-    : weekLeft > 0 ? t.s('enc.left', stage, { n: weekLeft, next: next ? `${next.a.title} — ${dueLabel(t, fmt, next.a.dueAt, now)}` : '—' }) : t('enc.progress', { done: weekDone.length, total: thisWeek.length });
-
-  const hour = new Date(now).getHours();
-  const greet = stage === 'early' ? t('greet.early', { name: studentFirst(student, lang) })
-    : t(hour < 12 ? 'greet.morning' : hour < 17 ? 'greet.afternoon' : 'greet.evening', { name: studentFirst(student, lang) });
-  const subjectsPresent = [...new Set(items.map((x) => x.a.subject))];
-  const reminders = db.reminders.filter((r) => r.studentId === student.id && !r.dismissed);
-  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  const statSize = stage === 'early' ? 'lg' : stage === 'senior' ? 'sm' : 'md';
-
-  return (
-    <div className={cx(stage === 'early' && 'stage-early')}>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm text-ags-slate flex flex-wrap gap-x-2">
-            <span>{fmt.dateLong(now)}</span><span aria-hidden="true">·</span><span className="text-xs self-center bg-white ring-1 ring-slate-200 rounded-full px-2 py-0.5">{fmt.hijri(now)}</span>
-          </p>
-          <h1 className={cx('font-bold text-ags-navy mt-1 leading-tight', stage === 'early' ? 'text-3xl sm:text-4xl' : stage === 'senior' ? 'text-2xl' : 'text-2xl sm:text-3xl')}>{greet}</h1>
-          <p className="text-ags-slate mt-1">{clsLabel(student.cls, lang, true)}</p>
-        </div>
-        {stage !== 'senior' ? (
-          <div className="card px-4 py-3 w-full sm:w-auto sm:min-w-[19rem] max-w-md">
-            <p className={cx('text-ags-navy font-medium flex items-center gap-2', stage === 'early' && 'text-lg')}>
-              {allOnTime ? <Star aria-hidden="true" className="w-5 h-5 text-ags-gold fill-current" /> : <TrendingUp aria-hidden="true" className="w-5 h-5 text-ags-indigo" />}{enc}
-            </p>
-            {thisWeek.length > 0 && <ProgressBar className="mt-2" value={weekDone.length} max={thisWeek.length} tone={allOnTime ? 'gold' : 'indigo'} label={t('enc.progress', { done: weekDone.length, total: thisWeek.length })} />}
-            {thisWeek.length > 0 && <p className="text-xs text-ags-slate mt-1.5">{t('enc.progress', { done: weekDone.length, total: thisWeek.length })}</p>}
-          </div>
-        ) : <p className="text-sm text-ags-slate max-w-xl">{enc}</p>}
-      </div>
-
-      {reminders.map((r) => (
-        <div key={r.id} className="card p-4 mb-4 flex flex-wrap items-center gap-3 border-s-4 border-ags-gold ags-fade-up">
-          <Bell aria-hidden="true" className="w-5 h-5 text-ags-indigo" />
-          <p className="flex-1 text-sm text-ags-navy min-w-[12rem]">{t('reminder.text', { teacher: teacherName(r.teacherId, lang), title: `\u2068${db.assignments[r.assignmentId]?.title}\u2069` })}</p>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate({ name: 'assignment', id: r.assignmentId })}>{t('reminder.open')}</button>
-          <button type="button" className="btn btn-ghost btn-icon" aria-label={t('dismiss')} onClick={() => actions.dismissReminder(r.id)}><X aria-hidden="true" className="w-4 h-4" /></button>
-        </div>
-      ))}
-
-      <div className={cx('grid gap-3 sm:gap-4 mb-6', stage === 'senior' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-4')}>
-        <StatCard size={statSize} icon={CalendarClock} tone="indigo" value={fmt.n(cDue)} label={t.s('dash.dueWeek', stage)} onClick={() => scrollTo('sec-due')} />
-        <StatCard size={statSize} icon={AlarmClock} tone="amber" value={fmt.n(cOver)} label={t.s('dash.overdue', stage)} onClick={() => scrollTo('sec-overdue')} />
-        <StatCard size={statSize} icon={Send} tone="grey" value={fmt.n(cSub)} label={t.s('dash.submitted', stage)} onClick={() => { setShowDone(true); setTimeout(() => scrollTo('sec-done'), 50); }} />
-        <StatCard size={statSize} icon={MessageSquareText} tone="green" value={fmt.n(cRet)} label={t.s('dash.returned', stage)} onClick={() => scrollTo('sec-returned')} />
-      </div>
-
-      {stage !== 'early' && (
-        <div className="grid lg:grid-cols-[1fr_minmax(0,26rem)] gap-4 mb-7 items-start">
-          <div className="min-w-0">
-            <p className="label">{t('filter.subjects')}</p>
-            <div className="scroll-x -mx-1 px-1"><div className="flex gap-2 pb-1 w-max lg:w-auto lg:flex-wrap">
-              {['all', ...subjectsPresent].map((s) => (
-                <button key={s} type="button" aria-pressed={subject === s} onClick={() => setSubject(s)}
-                  className={cx('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm ring-1 transition-colors min-h-[2.25rem]', subject === s ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white text-ags-navy ring-slate-200 hover:ring-ags-indigo')}>
-                  {s !== 'all' && <span aria-hidden="true" className="w-2 h-2 rounded-full" style={{ background: subject === s ? '#fff' : SUBJECTS[s].color }} />}
-                  {s === 'all' ? t('filter.all') : subjName(s, lang)}
-                </button>
-              ))}
-            </div></div>
-          </div>
-          <WeekStrip items={f.filter((x) => x.a.dueAt >= startOfDay(now))} day={day} setDay={setDay} />
-        </div>
-      )}
-
-      <section className="mb-8" aria-labelledby="sec-due-h">
-        <div id="sec-due" className="scroll-mt-24" />
-        <SectionTitle id="sec-due-h" icon={CalendarClock} title={t.s('sec.dueSoon', stage)} count={dueSoon.length} />
-        {day && <p className="text-sm text-ags-slate -mt-1 mb-3">{t('week.filtered', { day: fmt.weekday(fromYMDHM(day, '12:00')) })}</p>}
-        <CardList items={dueSoon} emptyText={t.s('empty.dueSoon', stage)} />
-      </section>
-
-      {overdue.length > 0 && (
-        <section className="mb-8" aria-labelledby="sec-overdue-h">
-          <div id="sec-overdue" className="scroll-mt-24" />
-          <div className="rounded-2xl bg-amber-50/70 ring-1 ring-amber-200 p-3 sm:p-4">
-            <SectionTitle id="sec-overdue-h" icon={AlarmClock} tone="text-amber-700" title={t.s('sec.overdue', stage)} count={overdue.length} />
-            <p className="text-sm text-amber-900 -mt-1 mb-3">{t('sec.overdue.hint')}</p>
-            <CardList items={overdue} />
-          </div>
-        </section>
-      )}
-
-      <section className="mb-8" aria-labelledby="sec-returned-h">
-        <div id="sec-returned" className="scroll-mt-24" />
-        <SectionTitle id="sec-returned-h" icon={MessageSquareText} tone="text-emerald-700" title={t.s('sec.returned', stage)} count={returned.length} />
-        <CardList items={returned} emptyText={t('empty.returned')} emptyIcon={MessageSquareText} />
-      </section>
-
-      <section aria-labelledby="sec-done-h">
-        <div id="sec-done" className="scroll-mt-24" />
-        <SectionTitle id="sec-done-h" icon={CheckCheck} title={t.s('sec.completed', stage)} count={completed.length}
-          right={<button type="button" className="btn btn-ghost btn-sm" aria-expanded={showDone} aria-controls="done-list" onClick={() => setShowDone((v) => !v)}>
-            {showDone ? t('hide') : t('show')}<ChevronDown aria-hidden="true" className={cx('w-4 h-4 transition-transform', showDone && 'rotate-180')} /></button>} />
-        <div id="done-list" hidden={!showDone}>{showDone && <CardList items={completed} emptyText={t('empty.completed')} />}</div>
-      </section>
-    </div>
-  );
-}
-
-function AllAssignments() {
-  const { t, stage } = useApp();
-  const items = useStudentItems();
-  const [tab, setTab] = useState('todo');
-  const groups = {
-    todo: items.filter((x) => ['notStarted', 'draft', 'overdue', 'closed'].includes(x.st)).sort((p, q) => p.a.dueAt - q.a.dueAt),
-    submitted: items.filter((x) => ['submitted', 'submittedLate'].includes(x.st)).sort((p, q) => q.a.dueAt - p.a.dueAt),
-    returned: items.filter((x) => ['returned', 'revision'].includes(x.st)).sort((p, q) => (q.sub.returnedAt || 0) - (p.sub.returnedAt || 0)),
-    all: [...items].sort((p, q) => q.a.dueAt - p.a.dueAt),
-  };
-  return (
-    <div className={cx(stage === 'early' && 'stage-early')}>
-      <PageHeader title={t('all.title')} subtitle={t('all.subtitle')} />
-      <div className="scroll-x mb-5"><Segmented ariaLabel={t('all.title')} value={tab} onChange={setTab}
-        options={[['todo', 'all.tab.todo'], ['submitted', 'all.tab.submitted'], ['returned', 'all.tab.returned'], ['all', 'all.tab.all']].map(([v, k]) => ({ value: v, label: `${t(k)} (${groups[v].length})` }))} /></div>
-      <CardList items={groups[tab]} />
-    </div>
-  );
-}
-
-/* ---------- assignment page pieces ---------- */
-
-function Meta({ icon: I, label, value, sub }) {
-  return (
-    <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 px-3.5 py-3 min-w-0">
-      <dt className="text-xs text-ags-slate flex items-center gap-1.5"><I aria-hidden="true" className="w-3.5 h-3.5" />{label}</dt>
-      <dd className="mt-1 text-sm font-medium text-ags-navy leading-snug">{value}</dd>
-      {sub && <dd className="text-xs text-ags-slate mt-0.5">{sub}</dd>}
-    </div>
-  );
-}
-
-function AssignmentHeader({ a, st }) {
-  const { t, fmt, lang, now, stage } = useApp();
-  const type = submissionType(a); const TI = TYPE_ICON[type];
-  const over = now > a.dueAt;
-  return (
-    <div className="card p-5 sm:p-6 mb-5 relative overflow-hidden">
-      <span aria-hidden="true" className="absolute inset-y-0 start-0 w-1.5" style={{ background: SUBJECTS[a.subject]?.color }} />
-      <div className="flex flex-wrap items-start gap-4">
-        <SubjectBadge code={a.subject} size={stage === 'early' ? 'xl' : 'lg'} />
-        <div className="flex-1 min-w-[12rem]">
-          <SubjectTag code={a.subject} />
-          <h1 className={cx('font-bold text-ags-navy mt-1 leading-tight', stage === 'early' ? 'text-3xl' : 'text-2xl sm:text-[1.7rem]')}><bdi>{a.title}</bdi></h1>
-          <p className="text-ags-slate mt-1 text-sm">{teacherName(a.teacherId, lang)} · {clsList(a.classes, lang)}</p>
-        </div>
-        {st && <StatusChip status={st} size="lg" />}
-      </div>
-      <dl className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-        <Meta icon={CalendarDays} label={t('a.due')} value={`${fmt.date(a.dueAt)} · ${fmt.time(a.dueAt)}`} sub={over ? `${t('due.was', { when: agoLabel(t, a.dueAt, now) })}` : dueLabel(t, fmt, a.dueAt, now)} />
-        <Meta icon={BadgeCheck} label={t('a.points')} value={t('pts', { n: a.points })} />
-        <Meta icon={Clock} label={t('a.latePolicy')} value={latePolicyText(t, fmt, a)} />
-        <Meta icon={TI} label={t('a.type')} value={t(`type.${type}`)} />
-      </dl>
-    </div>
-  );
-}
+/* ---------- shared: document preview, annotation canvas, image helpers ---------- */
 
 /** Mock document preview for attached worksheets (inline SVG; no real file). */
 function DocPreview({ att, a }) {
@@ -2413,222 +1533,6 @@ function DocPreview({ att, a }) {
   );
 }
 
-function AttachmentList({ a, attachments }) {
-  const { t } = useApp();
-  const [open, setOpen] = useState(null);
-  if (!attachments?.length) return null;
-  const icon = { worksheet: FileText, image: ImageIcon, link: Link2 };
-  return (
-    <div className="mt-4">
-      <h3 className="text-sm font-bold text-ags-navy mb-2 flex items-center gap-2"><Paperclip aria-hidden="true" className="w-4 h-4" />{t('a.attachments')}</h3>
-      <ul className="grid sm:grid-cols-2 gap-2">
-        {attachments.map((x) => {
-          const I = icon[x.kind] || FileText;
-          const inner = (
-            <>
-              <span className="w-10 h-12 rounded-md bg-ags-indigo-50 text-ags-indigo flex items-center justify-center shrink-0 overflow-hidden">
-                {x.kind === 'image' && x.src ? <img src={x.src} alt="" className="w-full h-full object-cover" /> : <I aria-hidden="true" className="w-5 h-5" />}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-ags-navy truncate" dir="auto">{x.name}</span>
-                <span className="block text-xs text-ags-slate">{t(`att.${x.kind}`)} · {x.kind === 'link' ? t('att.openLink') : t('att.preview')}</span>
-              </span>
-              {x.kind === 'link' ? <Link2 aria-hidden="true" className="w-4 h-4 text-ags-slate" /> : <Eye aria-hidden="true" className="w-4 h-4 text-ags-slate" />}
-            </>
-          );
-          return (
-            <li key={x.id}>
-              {x.kind === 'link'
-                ? <a href={x.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-xl ring-1 ring-slate-200 bg-white p-2.5 hover:ring-ags-indigo transition">{inner}</a>
-                : <button type="button" onClick={() => setOpen(x)} className="w-full text-start flex items-center gap-3 rounded-xl ring-1 ring-slate-200 bg-white p-2.5 hover:ring-ags-indigo transition">{inner}</button>}
-            </li>
-          );
-        })}
-      </ul>
-      <Modal open={!!open} onClose={() => setOpen(null)} title={open?.name || ''} icon={FileText} size="md"
-        footer={<button type="button" className="btn btn-primary" onClick={() => setOpen(null)}>{t('close')}</button>}>
-        {open && (open.kind === 'image' && open.src ? <img src={open.src} alt={open.name} className="w-full rounded-lg" /> : <DocPreview att={open} a={a} />)}
-        <p className="hint mt-3">{t('att.mockNote')}</p>
-      </Modal>
-    </div>
-  );
-}
-
-const MATCH_ORDER = (b) => b.pairs.map((_, i) => i).sort((x, y) => hashStr(`${b.id}${x}`) - hashStr(`${b.id}${y}`));
-
-function readFileMeta(file) {
-  return new Promise((resolve) => {
-    const meta = { id: uid('f'), name: file.name, size: file.size, type: file.type };
-    if (!file.type.startsWith('image/') || file.size > 8e6) { resolve(meta); return; }
-    const url = URL.createObjectURL(file);
-    downscaleImage(url, 900).then((r) => resolve({ ...meta, src: r.src })).catch(() => resolve(meta)).finally(() => URL.revokeObjectURL(url));
-  });
-}
-const fmtSize = (n) => (n > 1e6 ? `${round1(n / 1e6)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
-
-/** One question, rendered for answering, reviewing or showing results. */
-function QuestionCard({ a, b, index, value, onChange, readOnly, showResults, onOpenPaper, preview }) {
-  const { t, fmt, stage } = useApp();
-  const cdir = a.lang === 'ar' ? 'rtl' : 'ltr';
-  const name = `q_${b.id}`;
-  const correct = showResults && isAuto(b) ? scoreBlock(b, value) >= b.points : null;
-  const big = stage === 'early';
-  const optCls = (on, ok, bad) => cx('flex items-center gap-3 rounded-xl ring-1 px-3.5 py-3 transition-colors', big && 'py-4 text-lg',
-    ok ? 'ring-emerald-300 bg-emerald-50' : bad ? 'ring-rose-300 bg-rose-50' : on ? 'ring-ags-indigo bg-ags-indigo-50' : 'ring-slate-200 bg-white', !readOnly && 'cursor-pointer hover:ring-ags-indigo');
-  let body = null;
-
-  if (b.type === 'mcq' || b.type === 'tf') {
-    const opts = b.type === 'tf' ? [{ v: true, l: t('q.true') }, { v: false, l: t('q.false') }] : b.options.map((o, i) => ({ v: i, l: o }));
-    body = (
-      <div className={cx('grid gap-2', b.type === 'tf' && 'grid-cols-2')} role="radiogroup" aria-labelledby={`${name}_p`}>
-        {opts.map((o) => {
-          const on = value === o.v; const isC = showResults && o.v === b.correct; const bad = showResults && on && !isC;
-          return (
-            <label key={String(o.v)} className={optCls(on, isC, bad)}>
-              <input type="radio" name={name} checked={on} disabled={readOnly} onChange={() => onChange(o.v)} />
-              <span className="flex-1" dir={b.type === 'tf' ? undefined : cdir}>{o.l}</span>
-              {isC && <CheckCircle2 aria-label={t('fb.correctAnswer')} className="w-5 h-5 text-emerald-600" />}
-              {bad && <X aria-label={t('fb.yourAnswer')} className="w-5 h-5 text-rose-600" />}
-            </label>
-          );
-        })}
-      </div>
-    );
-  } else if (b.type === 'checkbox') {
-    const cur = Array.isArray(value) ? value : [];
-    body = (
-      <div className="grid gap-2">
-        <p className="hint">{t('q.chooseMany')}</p>
-        {b.options.map((o, i) => {
-          const on = cur.includes(i); const isC = showResults && (b.correct || []).includes(i); const bad = showResults && on && !isC;
-          return (
-            <label key={i} className={optCls(on, isC, bad)}>
-              <input type="checkbox" checked={on} disabled={readOnly} onChange={() => onChange(on ? cur.filter((x) => x !== i) : [...cur, i])} />
-              <span className="flex-1" dir={cdir}>{o}</span>
-            </label>
-          );
-        })}
-      </div>
-    );
-  } else if (b.type === 'short') {
-    body = <input className={cx('input', big && 'text-lg')} dir="auto" value={value || ''} readOnly={readOnly} placeholder={readOnly ? '' : t('q.typeHere')} aria-labelledby={`${name}_p`} onChange={(e) => onChange(e.target.value)} />;
-  } else if (b.type === 'long') {
-    const words = String(value || '').trim().split(/\s+/).filter(Boolean).length;
-    body = (
-      <div>
-        <textarea className="input min-h-[10rem]" dir="auto" value={value || ''} readOnly={readOnly} placeholder={readOnly ? '' : t('q.typeHere')} aria-labelledby={`${name}_p`} onChange={(e) => onChange(e.target.value)} />
-        <p className="hint mt-1 text-end tabular">{t('q.words', { n: words })}</p>
-      </div>
-    );
-  } else if (b.type === 'match') {
-    const order = MATCH_ORDER(b); const cur = value || {};
-    body = (
-      <div>
-        <p className="hint mb-2">{t('q.matchHint')}</p>
-        <div className="grid gap-2">
-          {b.pairs.map((p, i) => {
-            const ok = showResults && cur[i] === i; const bad = showResults && cur[i] !== i;
-            return (
-              <div key={i} className={cx('grid sm:grid-cols-[1fr_1.4fr] gap-2 items-center rounded-xl ring-1 p-2.5', ok ? 'ring-emerald-300 bg-emerald-50' : bad ? 'ring-rose-300 bg-rose-50' : 'ring-slate-200 bg-white')}>
-                <span id={`${name}_l${i}`} className="font-bold text-ags-navy px-1" dir={cdir}>{p.left}</span>
-                <select className="input" dir={cdir} aria-labelledby={`${name}_l${i}`} disabled={readOnly} value={cur[i] ?? ''} onChange={(e) => onChange({ ...cur, [i]: e.target.value === '' ? undefined : Number(e.target.value) })}>
-                  <option value="">{t('q.matchSelect')}</option>
-                  {order.map((j) => <option key={j} value={j}>{b.pairs[j].right}</option>)}
-                </select>
-                {bad && <span className="sm:col-span-2 text-xs text-rose-800">{t('fb.correctAnswer')}: <span dir={cdir}>{p.right}</span></span>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  } else if (b.type === 'file') {
-    const files = Array.isArray(value) ? value : [];
-    body = (
-      <div>
-        {files.length > 0 && (
-          <ul className="grid gap-2 mb-3">
-            {files.map((f) => (
-              <li key={f.id} className="flex items-center gap-3 rounded-xl ring-1 ring-slate-200 bg-white p-2.5">
-                <span className="w-10 h-10 rounded-lg bg-ags-indigo-50 text-ags-indigo flex items-center justify-center overflow-hidden shrink-0">{f.src ? <img src={f.src} alt="" className="w-full h-full object-cover" /> : <FileText aria-hidden="true" className="w-5 h-5" />}</span>
-                <span className="flex-1 min-w-0"><span className="block text-sm font-medium truncate" dir="auto">{f.name}</span><span className="block text-xs text-ags-slate tabular">{fmtSize(f.size || 0)}</span></span>
-                {!readOnly && <button type="button" className="btn btn-ghost btn-icon" aria-label={`${t('q.file.remove')}: ${f.name}`} onClick={() => onChange(files.filter((x) => x.id !== f.id))}><Trash2 aria-hidden="true" className="w-4 h-4" /></button>}
-              </li>
-            ))}
-          </ul>
-        )}
-        {!readOnly && (
-          <label className={cx('btn btn-secondary cursor-pointer', preview && 'pointer-events-none opacity-60')}>
-            <Upload aria-hidden="true" className="w-4 h-4" />{t('q.file.add')}
-            <input type="file" className="sr-only" multiple disabled={preview} onChange={async (e) => { const fl = [...e.target.files]; e.target.value = ''; const metas = await Promise.all(fl.map(readFileMeta)); onChange([...files, ...metas]); }} />
-          </label>
-        )}
-        {!readOnly && <p className="hint mt-2">{t('q.file.hint')} · {t('q.file.demo')}</p>}
-      </div>
-    );
-  } else if (b.type === 'paper') {
-    const pages = Array.isArray(value) ? value : [];
-    body = (
-      <div className="rounded-2xl border border-dashed border-ags-indigo/40 bg-ags-indigo-50/40 p-4">
-        {pages.length > 0 ? (
-          <>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {pages.map((p, i) => (
-                <figure key={p.id} className="relative shrink-0 w-24">
-                  <img src={pageSrc(p)} alt={t('p.page', { n: i + 1 })} className="w-24 h-32 object-cover rounded-lg ring-1 ring-slate-200 bg-white" />
-                  <figcaption className="absolute top-1 start-1 text-[0.65rem] font-bold bg-ags-navy text-white rounded px-1.5 tabular">{fmt.n(i + 1)}</figcaption>
-                </figure>
-              ))}
-            </div>
-            <p className="text-sm text-ags-navy mt-2 font-medium">{t('q.paper.pages', { n: pages.length })}</p>
-            {!readOnly && <button type="button" className="btn btn-secondary btn-sm mt-2" onClick={() => onOpenPaper(b.id)}><Images aria-hidden="true" className="w-4 h-4" />{t('q.paper.ctaEdit')}</button>}
-          </>
-        ) : (
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="w-12 h-12 rounded-2xl bg-white text-ags-indigo ring-1 ring-ags-indigo/20 inline-flex items-center justify-center"><Camera aria-hidden="true" className="w-6 h-6" /></span>
-            <p className="flex-1 text-sm text-ags-slate min-w-[12rem]">{preview ? t('q.preview.paper') : t('q.paper.hint')}</p>
-            {!readOnly && <button type="button" className={cx('btn btn-gold', big && 'btn-lg')} disabled={preview} onClick={() => onOpenPaper(b.id)}><Camera aria-hidden="true" className="w-5 h-5" />{t('q.paper.cta')}</button>}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <fieldset id={`q-${b.id}`} className="card p-4 sm:p-5 scroll-mt-28">
-      <legend className="sr-only">{t('q.number', { n: index + 1 })}</legend>
-      <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
-        <span className="font-bold text-ags-indigo">{t('q.number', { n: index + 1 })}</span>
-        <span className="text-ags-slate">· {t(`q.${b.type}`)} · {t('pts', { n: b.points })}</span>
-        {b.required && <span className="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{t('q.required')}</span>}
-        {correct === true && <span className="ms-auto inline-flex items-center gap-1 text-emerald-800 bg-emerald-50 ring-1 ring-emerald-200 rounded-full px-2 py-0.5 font-medium"><Check aria-hidden="true" className="w-3.5 h-3.5" />{t('fb.correct')}</span>}
-        {correct === false && <span className="ms-auto inline-flex items-center gap-1 text-rose-800 bg-rose-50 ring-1 ring-rose-200 rounded-full px-2 py-0.5 font-medium"><X aria-hidden="true" className="w-3.5 h-3.5" />{t('fb.incorrect')} · {fmt.score(scoreBlock(b, value), b.points)}</span>}
-      </div>
-      <p id={`${name}_p`} className={cx('font-medium text-ags-navy mb-3 leading-relaxed', big ? 'text-xl' : 'text-[1.02rem]')} dir={cdir}>{b.prompt}</p>
-      {body}
-    </fieldset>
-  );
-}
-
-function AnswerSummary({ a, b, v }) {
-  const { t, fmt } = useApp();
-  const cdir = a.lang === 'ar' ? 'rtl' : 'ltr';
-  if (!isAnswered(b, v)) return <span className="text-amber-800 inline-flex items-center gap-1.5"><AlertCircle aria-hidden="true" className="w-4 h-4" />{t('review.noAnswer')}</span>;
-  if (b.type === 'mcq') return <span dir={cdir}>{b.options[v]}</span>;
-  if (b.type === 'tf') return <span>{v ? t('q.true') : t('q.false')}</span>;
-  if (b.type === 'checkbox') return <span dir={cdir}>{v.map((i) => b.options[i]).join(' · ')}</span>;
-  if (b.type === 'match') return <span dir={cdir}>{b.pairs.map((p, i) => `${p.left} → ${b.pairs[v[i]]?.right ?? '—'}`).join(' · ')}</span>;
-  if (b.type === 'file') return <span dir="auto">{v.map((f) => f.name).join(', ')}</span>;
-  if (b.type === 'paper') {
-    return (
-      <span className="flex gap-2 flex-wrap">
-        {v.map((p, i) => <img key={p.id} src={pageSrc(p)} alt={t('p.page', { n: i + 1 })} className="w-20 h-28 object-cover rounded-lg ring-1 ring-slate-200" />)}
-        <span className="self-end text-xs text-ags-slate">{t('q.paper.pages', { n: v.length })}</span>
-      </span>
-    );
-  }
-  return <span className="whitespace-pre-wrap" dir="auto">{String(v).length > 280 ? `${String(v).slice(0, 280)}…` : v}</span>;
-}
 
 /* ---------- annotation canvas (shared by grading & feedback) ---------- */
 
@@ -2711,223 +1615,6 @@ function AnnotatedPage({ src, annotations = [], editable = false, tool = 'pen', 
   );
 }
 
-function FeedbackPanel({ a, sub, entry, isPrevious }) {
-  const { t, fmt, lang, now } = useApp();
-  const f = entry || sub;
-  const auto = autoScore(a, f.answers || sub.answers);
-  const pages = a.blocks.filter((b) => b.type === 'paper').flatMap((b) => (f.answers || sub.answers)[b.id] || []);
-  const annPages = pages.filter((p) => (f.annotations || {})[p.id]?.length);
-  return (
-    <section aria-label={t('fb.title', { teacher: teacherName(a.teacherId, lang) })} className={cx('card p-5 sm:p-6 mb-5 border-t-4', isPrevious ? 'border-slate-300' : 'border-emerald-500')}>
-      <div className="flex flex-wrap items-start gap-5">
-        <div className="text-center rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 px-6 py-4">
-          <p className="text-xs text-emerald-900 font-medium">{t('fb.mark')}</p>
-          <p className="text-3xl font-bold text-emerald-900 tabular mt-1">{fmt.n(f.mark ?? 0)}<span className="text-lg text-emerald-800"> / {fmt.n(a.points)}</span></p>
-        </div>
-        <div className="flex-1 min-w-[14rem]">
-          <h2 className="font-bold text-ags-navy text-lg">{isPrevious ? t('fb.previous') : t('fb.title', { teacher: teacherShort(a.teacherId, lang) })}</h2>
-          {f.returnedAt && <p className="text-xs text-ags-slate">{t('fb.returnedOn', { when: agoLabel(t, f.returnedAt, now) })}</p>}
-          {f.comment && (
-            <blockquote className="mt-3 flex gap-3 rounded-xl bg-slate-50 p-3.5">
-              <Avatar name={teacherName(a.teacherId, 'en')} size="sm" />
-              <p className="text-ags-navy leading-relaxed" dir="auto">{f.comment}</p>
-            </blockquote>
-          )}
-        </div>
-      </div>
-      {(a.rubric.length > 0 || auto.count > 0) && (
-        <div className="mt-5 grid sm:grid-cols-2 gap-4">
-          {auto.count > 0 && (
-            <div className="rounded-xl ring-1 ring-slate-200 p-3.5">
-              <p className="text-sm font-bold text-ags-navy flex items-center gap-2"><ListChecks aria-hidden="true" className="w-4 h-4 text-ags-indigo" />{t('fb.auto')}</p>
-              <p className="text-2xl font-bold tabular mt-1 text-ags-navy">{fmt.score(auto.score, auto.max)}</p>
-            </div>
-          )}
-          {a.rubric.length > 0 && (
-            <div className="rounded-xl ring-1 ring-slate-200 p-3.5">
-              <p className="text-sm font-bold text-ags-navy flex items-center gap-2 mb-2"><ClipboardList aria-hidden="true" className="w-4 h-4 text-ags-indigo" />{t('fb.rubric')}</p>
-              <ul className="space-y-2">
-                {a.rubric.map((c) => {
-                  const v = (f.rubricScores || {})[c.id] ?? 0;
-                  return (
-                    <li key={c.id}>
-                      <div className="flex justify-between text-sm"><span>{c.key ? t(`rub.${c.key}`) : c.label}</span><span className="tabular font-medium">{fmt.score(v, c.max)}</span></div>
-                      <ProgressBar value={v} max={c.max} tone="green" className="mt-1" label={c.key ? t(`rub.${c.key}`) : c.label} />
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-      {annPages.length > 0 && !isPrevious && (
-        <div className="mt-5">
-          <p className="text-sm font-bold text-ags-navy mb-2 flex items-center gap-2"><PenLine aria-hidden="true" className="w-4 h-4 text-ags-indigo" />{t('fb.annotated')}</p>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {annPages.map((p) => <AnnotatedPage key={p.id} src={pageSrc(p)} annotations={f.annotations[p.id]} alt={t('p.page', { n: pages.indexOf(p) + 1 })} />)}
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function AssignmentPage({ id }) {
-  const { t, fmt, lang, stage, student, now, db, actions, navigate, guide, markGuide, toast } = useApp();
-  const a = db.assignments[id];
-  const sub = a ? db.submissions[subKey(a.id, student.id)] : null;
-  const [answers, setAnswers] = useState(() => (sub?.answers ? { ...sub.answers } : {}));
-  const [mode, setMode] = useState('answer');
-  const [saving, setSaving] = useState(false);
-  const [doneInfo, setDoneInfo] = useState(null);
-  const timer = useRef(null); const latest = useRef(answers); latest.current = answers;
-
-  const st = a ? studentState(a, sub, now) : null;
-  const editable = !!a && (!sub || sub.status === 'draft') && canSubmit(a, now, sub);
-  const viewOnlyClosed = !!a && (!sub || sub.status === 'draft') && !canSubmit(a, now, sub);
-
-  useEffect(() => { // pick up changes made elsewhere (e.g. pages from the photo flow, resubmit)
-    setAnswers(sub?.answers ? { ...sub.answers } : {});
-  }, [sub?.status, sub?.resubmitting, id]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => { if (timer.current) { clearTimeout(timer.current); actions.saveDraft(id, student.id, latest.current); } }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (a && guide.aid === a.id && student.id === 's_omar' && (st === 'returned' || st === 'revision')) markGuide(4);
-  }, [a, st, guide.aid, student.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!a || !isVisibleToStudent(a, student, now)) {
-    return <div className="card"><EmptyState title={t('a.notFound')} action={<button type="button" className="btn btn-primary" onClick={() => navigate({ name: 'home' })}>{t('back.home')}</button>} /></div>;
-  }
-
-  const setAnswer = (bid, v) => {
-    setAnswers((prev) => ({ ...prev, [bid]: v }));
-    setSaving(true);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => { timer.current = null; actions.saveDraft(a.id, student.id, latest.current); setSaving(false); }, 700);
-  };
-  const flush = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } actions.saveDraft(a.id, student.id, latest.current); setSaving(false); };
-  const openPaper = (bid) => { flush(); navigate({ name: 'paper', id: a.id, blockId: bid }); };
-  const required = a.blocks.filter((b) => b.required);
-  const answered = a.blocks.filter((b) => isAnswered(b, answers[b.id])).length;
-  const missingReq = required.filter((b) => !isAnswered(b, answers[b.id]));
-  const late = now > a.dueAt;
-  const showResults = ['returned', 'revision'].includes(sub?.status);
-  const history = sub?.history || [];
-
-  const doSubmit = () => {
-    flush();
-    const res = actions.submit(a.id, student.id, latest.current);
-    setDoneInfo(res); setMode('done');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  if (mode === 'done' && doneInfo) {
-    const early = stage === 'early';
-    return (
-      <div className="max-w-xl mx-auto text-center card p-8 sm:p-10 ags-fade-up">
-        {settingsReduce() ? <CheckCircle2 aria-hidden="true" className="w-20 h-20 mx-auto text-emerald-600" /> : <SuccessCheck early={early} />}
-        <h1 className={cx('font-bold text-ags-navy mt-5', early ? 'text-3xl' : 'text-2xl')} role="status">{early ? t('done.early') : doneInfo.late ? t('done.lateDays', { n: doneInfo.daysLate }) : t('done.onTime')}</h1>
-        <p className="text-ags-slate mt-2">
-          {stage === 'senior' ? t('done.senior', { date: fmt.date(doneInfo.at), time: fmt.time(doneInfo.at) }) : doneInfo.late ? t('done.lateHelp') : early ? '' : t('done.sub', { title: a.title })}
-        </p>
-        <div className="mt-7 flex flex-wrap justify-center gap-2">
-          <button type="button" className={cx('btn btn-primary', early && 'btn-lg')} onClick={() => navigate({ name: 'home' })}><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('back.home')}</button>
-          <button type="button" className="btn btn-secondary" onClick={() => setMode('answer')}>{t('done.view')}</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (mode === 'review') {
-    return (
-      <div className="max-w-3xl mx-auto">
-        <PageHeader title={t('review.title')} subtitle={a.title} onBack={() => setMode('answer')} backLabel={t('review.edit')} />
-        {late && <div className="mb-4 rounded-xl bg-amber-50 ring-1 ring-amber-200 p-3.5 text-sm text-amber-900 flex gap-2"><Clock aria-hidden="true" className="w-5 h-5 shrink-0" />{t('review.lateNote')}</div>}
-        <ol className="card divide-y divide-slate-100">
-          {a.blocks.map((b, i) => (
-            <li key={b.id} className="p-4 sm:p-5">
-              <p className="text-xs text-ags-indigo font-bold">{t('q.number', { n: i + 1 })} · {t(`q.${b.type}`)}</p>
-              <p className="font-medium text-ags-navy mt-1 mb-2" dir={a.lang === 'ar' ? 'rtl' : 'ltr'}>{b.prompt}</p>
-              <div className="text-sm text-ags-navy/90"><AnswerSummary a={a} b={b} v={answers[b.id]} /></div>
-              {b.required && !isAnswered(b, answers[b.id]) && (
-                <button type="button" className="btn btn-ghost btn-sm mt-2 !min-h-[2rem]" onClick={() => { setMode('answer'); setTimeout(() => document.getElementById(`q-${b.id}`)?.scrollIntoView({ behavior: 'smooth' }), 350); }}>{t('review.goto')}</button>
-              )}
-            </li>
-          ))}
-        </ol>
-        {sub?.note && <p className="mt-4 text-sm"><span className="font-medium">{t('p.note')}:</span> <span dir="auto">{sub.note}</span></p>}
-        <div className="mt-6 flex flex-wrap items-center gap-3 justify-end">
-          {missingReq.length > 0 && <p className="text-sm text-amber-900 me-auto flex items-center gap-1.5"><AlertCircle aria-hidden="true" className="w-4 h-4" />{t('review.missing', { n: missingReq.length })}</p>}
-          <button type="button" className="btn btn-secondary" onClick={() => setMode('answer')}>{t('review.edit')}</button>
-          <button type="button" className="btn btn-primary btn-lg" disabled={missingReq.length > 0} onClick={doSubmit}><Send aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('review.confirm')}</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={cx('max-w-4xl mx-auto', stage === 'early' && 'stage-early')}>
-      <button type="button" onClick={() => { flush(); navigate({ name: 'home' }); }} className="btn btn-ghost btn-sm -ms-2 mb-3"><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('back.home')}</button>
-      <AssignmentHeader a={a} st={st} />
-
-      {sub?.status === 'revision' && (
-        <div className="mb-5 rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 p-4 flex flex-wrap items-center gap-3">
-          <RotateCcw aria-hidden="true" className="w-5 h-5 text-emerald-700" />
-          <p className="flex-1 text-emerald-950 min-w-[12rem]">{t('fb.revision')}</p>
-          <button type="button" className="btn btn-primary" onClick={() => { actions.startResubmit(a.id, student.id); toast(t('resubmit.started'), { kind: 'info' }); }}><RotateCcw aria-hidden="true" className="w-4 h-4" />{t('resubmit')}</button>
-        </div>
-      )}
-      {showResults && <FeedbackPanel a={a} sub={sub} />}
-      {sub?.resubmitting && history.length > 0 && <FeedbackPanel a={a} sub={sub} entry={history[history.length - 1]} isPrevious />}
-
-      {['submitted', 'graded'].includes(sub?.status) && (
-        <div className="mb-5 rounded-2xl bg-ags-indigo-50 ring-1 ring-indigo-200 p-4 flex items-center gap-3">
-          <Send aria-hidden="true" className="w-5 h-5 text-ags-indigo flip-rtl" />
-          <p className="text-ags-navy">{t('fb.awaiting', { when: `${fmt.date(sub.submittedAt)} · ${fmt.time(sub.submittedAt)}` })}{sub.late ? ` · ${t('late.days', { n: lateDays(a.dueAt, sub.submittedAt) })}` : ''}</p>
-        </div>
-      )}
-      {st === 'overdue' && editable && <div className="mb-5 rounded-2xl bg-amber-50 ring-1 ring-amber-200 p-4 flex gap-3 text-amber-950"><AlarmClock aria-hidden="true" className="w-5 h-5 shrink-0 text-amber-700" /><p>{a.latePolicy?.mode === 'until' ? t('overdue.until', { date: `${fmt.date(a.latePolicy.until)} · ${fmt.time(a.latePolicy.until)}` }) : t('overdue.any')}</p></div>}
-      {viewOnlyClosed && <div className="mb-5 rounded-2xl bg-rose-50 ring-1 ring-rose-200 p-4 flex gap-3 text-rose-950"><Info aria-hidden="true" className="w-5 h-5 shrink-0" /><p>{t('overdue.closed')}</p></div>}
-
-      <section className="card p-5 sm:p-6 mb-5">
-        <h2 className="font-bold text-ags-navy mb-2">{t('a.instructions')}</h2>
-        <p className="text-ags-navy/90 leading-relaxed whitespace-pre-wrap" dir={a.lang === 'ar' ? 'rtl' : 'auto'}>{a.instructions || '—'}</p>
-        <AttachmentList a={a} attachments={a.attachments} />
-      </section>
-
-      {editable && (
-        <div className="sticky top-16 z-20 -mx-3 sm:mx-0 mb-4 bg-ags-bg/95 backdrop-blur px-3 sm:px-0 py-2">
-          <div className="card px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-            <span className="text-sm font-medium text-ags-navy tabular">{t('a.progress', { done: answered, total: a.blocks.length })}</span>
-            <ProgressBar value={answered} max={a.blocks.length} className="flex-1 min-w-[6rem]" label={t('a.progress', { done: answered, total: a.blocks.length })} />
-            <span className="text-xs text-ags-slate inline-flex items-center gap-1.5" aria-live="polite">
-              {saving ? <><Loader2 aria-hidden="true" className="w-3.5 h-3.5 animate-spin" />{t('a.saving')}</>
-                : sub?.draftSavedAt ? <><CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-emerald-600" />{t('a.saved', { when: agoLabel(t, sub.draftSavedAt, now) })}</> : t('a.autosave')}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {a.blocks.map((b, i) => (
-          <QuestionCard key={b.id} a={a} b={b} index={i} value={answers[b.id]} onChange={(v) => setAnswer(b.id, v)} readOnly={!editable} showResults={showResults} onOpenPaper={openPaper} />
-        ))}
-      </div>
-
-      {editable && (
-        <div className="mt-6 flex flex-wrap gap-2 justify-end">
-          <button type="button" className="btn btn-secondary" onClick={() => { flush(); toast(t('a.draftToast'), { kind: 'success' }); }}><PencilLine aria-hidden="true" className="w-4 h-4" />{t('saveDraft')}</button>
-          <button type="button" className={cx('btn btn-primary', stage === 'early' && 'btn-lg')} onClick={() => { flush(); setMode('review'); window.scrollTo({ top: 0 }); }}>
-            <Send aria-hidden="true" className="w-4 h-4 flip-rtl" />{sub?.resubmitting ? t('resubmit') : t('submit')}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-const settingsReduce = () => typeof document !== 'undefined' && document.querySelector('.ags-root.reduce-motion') != null;
-
-/* ---------- paper homework flow (photo submission) ---------- */
 
 function loadImage(src) {
   return new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = src; });
@@ -2947,1131 +1634,831 @@ async function rotateImage(src) {
   const ctx = c.getContext('2d'); ctx.translate(h, 0); ctx.rotate(Math.PI / 2); ctx.drawImage(img, 0, 0, w, h);
   return c.toDataURL('image/jpeg', 0.9);
 }
-async function cropImage(src, r) {
-  const img = await loadImage(src);
-  const w = img.naturalWidth || img.width; const h = img.naturalHeight || img.height;
-  const sx = Math.round(r.x * w); const sy = Math.round(r.y * h); const sw = Math.max(8, Math.round(r.w * w)); const sh = Math.max(8, Math.round(r.h * h));
-  const c = document.createElement('canvas'); c.width = sw; c.height = sh;
-  c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-  return c.toDataURL('image/jpeg', 0.9);
+
+const settingsReduce = () => typeof document !== 'undefined' && document.querySelector('.ags-root.reduce-motion') != null;
+
+/* ============================================================================
+ * 9. SHELL — one top bar, no sidebar. Teachers get three simple tabs.
+ * ========================================================================== */
+
+function Wordmark() {
+  const { t } = useApp();
+  return (
+    <div className="flex items-center gap-2.5 shrink-0">
+      <span className="bg-ags-navy text-ags-gold font-bold tracking-widest rounded-lg px-2.5 py-1 text-lg leading-none ring-1 ring-white/10" dir="ltr">AGS</span>
+      <span className="font-medium text-white text-[1.05rem] leading-tight hidden min-[380px]:inline">{t('app.name')}</span>
+    </div>
+  );
 }
 
-function CropOverlay({ rect, setRect }) {
-  const { t } = useApp();
-  const box = useRef(null); const drag = useRef(null);
-  const start = (mode) => (e) => { e.preventDefault(); e.stopPropagation(); drag.current = { mode, x: e.clientX, y: e.clientY, r: { ...rect } }; e.currentTarget.setPointerCapture(e.pointerId); };
-  const move = (e) => {
-    const d = drag.current; if (!d) return;
-    const b = box.current.getBoundingClientRect();
-    const dx = (e.clientX - d.x) / b.width; const dy = (e.clientY - d.y) / b.height; const m = 0.1;
-    let { x, y, w, h } = d.r;
-    if (d.mode === 'move') { x = clamp(x + dx, 0, 1 - w); y = clamp(y + dy, 0, 1 - h); }
-    if (d.mode.includes('l')) { const nx = clamp(x + dx, 0, x + w - m); w += x - nx; x = nx; }
-    if (d.mode.includes('r')) w = clamp(w + dx, m, 1 - x);
-    if (d.mode.includes('t')) { const ny = clamp(y + dy, 0, y + h - m); h += y - ny; y = ny; }
-    if (d.mode.includes('b')) h = clamp(h + dy, m, 1 - y);
-    setRect({ x, y, w, h });
-  };
-  const end = () => { drag.current = null; };
-  const nudge = (mode) => (e) => { // keyboard support for the corner handles
-    const k = { ArrowLeft: [-0.02, 0], ArrowRight: [0.02, 0], ArrowUp: [0, -0.02], ArrowDown: [0, 0.02] }[e.key]; if (!k) return;
-    e.preventDefault(); let { x, y, w, h } = rect; const [dx, dy] = k;
-    if (mode.includes('l')) { const nx = clamp(x + dx, 0, x + w - 0.1); w += x - nx; x = nx; } else { w = clamp(w + dx, 0.1, 1 - x); }
-    if (mode.includes('t')) { const ny = clamp(y + dy, 0, y + h - 0.1); h += y - ny; y = ny; } else { h = clamp(h + dy, 0.1, 1 - y); }
-    setRect({ x, y, w, h });
-  };
-  const pct = (v) => `${v * 100}%`;
+function LangToggle() {
+  const { lang, setLang, t } = useApp();
   return (
-    <div ref={box} className="absolute inset-0 touch-none" onPointerMove={move} onPointerUp={end} onPointerCancel={end} dir="ltr">
-      <div className="absolute inset-0 bg-black/45" style={{ clipPath: `polygon(0 0,100% 0,100% 100%,0 100%,0 ${pct(rect.y)},${pct(rect.x)} ${pct(rect.y)},${pct(rect.x)} ${pct(rect.y + rect.h)},${pct(rect.x + rect.w)} ${pct(rect.y + rect.h)},${pct(rect.x + rect.w)} ${pct(rect.y)},0 ${pct(rect.y)})` }} />
-      <div className="absolute ring-2 ring-ags-gold cursor-move" style={{ left: pct(rect.x), top: pct(rect.y), width: pct(rect.w), height: pct(rect.h) }} onPointerDown={start('move')}>
-        <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">{Array.from({ length: 9 }).map((_, i) => <span key={i} className="border border-white/30" />)}</div>
-        {['tl', 'tr', 'bl', 'br'].map((c) => (
-          <button key={c} type="button" aria-label={`${t('p.cropHandle')} (${c})`} onPointerDown={start(c)} onKeyDown={nudge(c)}
-            className="absolute w-7 h-7 -m-3.5 rounded-full bg-ags-gold ring-2 ring-white shadow touch-none"
-            style={{ left: c.includes('l') ? 0 : '100%', top: c.includes('t') ? 0 : '100%', cursor: c === 'tl' || c === 'br' ? 'nwse-resize' : 'nesw-resize' }} />
-        ))}
+    <div role="group" aria-label={t('lang.label')} className="inline-flex rounded-lg bg-ags-navy/70 ring-1 ring-white/10 p-0.5">
+      {[['en', 'EN', 'English'], ['ar', 'ع', 'العربية']].map(([code, short, full]) => (
+        <button key={code} type="button" lang={code} aria-pressed={lang === code} aria-label={full} onClick={() => setLang(code)}
+          className={cx('min-w-[2.4rem] min-h-[2.2rem] px-2 rounded-md text-sm font-bold transition-colors', lang === code ? 'bg-ags-gold text-ags-navy' : 'text-white/85 hover:bg-white/10')}>{short}</button>
+      ))}
+    </div>
+  );
+}
+
+function RoleSwitch({ full }) {
+  const { role, setRole, t } = useApp();
+  return (
+    <Segmented dark full={full} ariaLabel={t('role.label')} value={role} onChange={setRole}
+      options={[{ value: 'student', label: t('role.student'), icon: GraduationCap }, { value: 'teacher', label: t('role.teacher'), icon: Presentation }, { value: 'admin', label: t('role.admin'), icon: Building2 }]} />
+  );
+}
+
+function TopBar({ onSettings }) {
+  const { t } = useApp();
+  return (
+    <header className="on-dark sticky top-0 z-50 bg-ags-indigo text-white shadow-[0_2px_12px_rgba(32,31,60,.25)]">
+      <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 h-16">
+        <Wordmark />
+        <div className="hidden md:flex flex-1 justify-center"><RoleSwitch /></div>
+        <div className="ms-auto md:ms-0 flex items-center gap-2">
+          <LangToggle />
+          <button type="button" onClick={onSettings} className="btn btn-icon text-white/90 hover:bg-white/10" aria-label={t('settings')}><Settings aria-hidden="true" className="w-5 h-5" /></button>
+        </div>
+      </div>
+      <div className="md:hidden px-4 pb-3"><RoleSwitch full /></div>
+    </header>
+  );
+}
+
+function AgeBar() {
+  const { t, stage, setStage } = useApp();
+  return (
+    <div className="bg-ags-gold-50 border-b border-amber-200/70">
+      <div className="max-w-6xl mx-auto px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="text-sm text-ags-navy inline-flex items-center gap-2"><Eye aria-hidden="true" className="w-4 h-4" />{t('stage.label')}</span>
+        <div className="scroll-x max-w-full">
+          <Segmented size="sm" ariaLabel={t('stage.label')} value={stage} onChange={setStage}
+            options={[{ value: 'early', label: t('stage.early') }, { value: 'middle', label: t('stage.middle') }, { value: 'senior', label: t('stage.senior') }]} />
+        </div>
       </div>
     </div>
   );
 }
 
-function PaperUpload({ id, blockId }) {
-  const { t, fmt, lang, stage, student, now, db, actions, navigate, toast } = useApp();
-  const a = db.assignments[id];
-  const sub = a ? db.submissions[subKey(a.id, student.id)] : null;
-  const block = a?.blocks.find((b) => b.id === blockId) || a?.blocks.find((b) => b.type === 'paper');
-  const pages = (block && sub?.answers?.[block.id]) || [];
-  const [sel, setSel] = useState(0);
-  const [step, setStep] = useState(pages.length ? 'edit' : 'add');
-  const [showSamples, setShowSamples] = useState(false);
+function TeacherTabs() {
+  const { t, route, navigate } = useApp();
+  const active = route.name === 'create' ? 'create' : route.name === 'progress' ? 'progress' : 'home';
+  const tabs = [['home', 'tt.home', LayoutDashboard], ['create', 'tt.create', PlusCircle], ['progress', 'tt.progress', BarChart3]];
+  return (
+    <nav aria-label={t('nav.main')} className="scroll-x mb-6">
+      <div className="flex gap-2 w-max">
+        {tabs.map(([id, k, I]) => (
+          <button key={id} type="button" aria-current={active === id ? 'page' : undefined} onClick={() => navigate({ name: id })}
+            className={cx('inline-flex items-center gap-2 rounded-full px-4 py-2 text-[0.95rem] font-medium ring-1 whitespace-nowrap min-h-[2.75rem] transition-colors', active === id ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white text-ags-navy ring-slate-200 hover:ring-ags-indigo')}>
+            <I aria-hidden="true" className="w-4 h-4" />{t(k)}
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function DemoGuide() {
+  const { t, guide, setGuide, guideGo } = useApp();
+  const steps = [1, 2, 3, 4, 5, 6];
+  const done = steps.filter((i) => guide.steps[i]).length;
+  const next = steps.find((i) => !guide.steps[i]);
+  if (!guide.open) {
+    return (
+      <button type="button" key={done} onClick={() => setGuide((g) => ({ ...g, open: true }))}
+        className={cx('fixed z-40 bottom-4 start-4 btn btn-gold shadow-lg rounded-full', done > 0 && 'ags-flash')}>
+        <Sparkles aria-hidden="true" className="w-4 h-4" />{t('guide.title')}
+        <span className="text-xs font-bold bg-ags-navy text-ags-gold rounded-full px-1.5 tabular">{t('guide.progress', { n: done })}</span>
+      </button>
+    );
+  }
+  return (
+    <aside aria-label={t('guide.title')} className="fixed z-40 bottom-4 start-4 w-[min(21rem,calc(100vw-2rem))] card shadow-2xl ags-fade-up overflow-hidden">
+      <div className="bg-ags-navy text-white px-4 py-3 flex items-center gap-2 on-dark">
+        <Sparkles aria-hidden="true" className="w-4 h-4 text-ags-gold" />
+        <h2 className="font-bold text-sm flex-1">{t('guide.title')}</h2>
+        <span className="text-xs text-white/80 tabular">{t('guide.progress', { n: done })}</span>
+        <button type="button" className="btn btn-icon text-white/85 hover:bg-white/10 !min-h-0 !min-w-0 w-8 h-8" onClick={() => setGuide((g) => ({ ...g, open: false }))} aria-label={t('guide.hide')}><X aria-hidden="true" className="w-4 h-4" /></button>
+      </div>
+      <ol className="p-2 space-y-0.5">
+        {steps.map((i) => {
+          const ok = guide.steps[i];
+          return (
+            <li key={i}>
+              <button type="button" onClick={() => guideGo(i)} className={cx('w-full text-start flex items-start gap-2.5 rounded-xl px-2.5 py-2 transition-colors', ok ? 'bg-emerald-50/70 hover:bg-emerald-50' : i === next ? 'bg-ags-gold-50 ring-1 ring-amber-200' : 'hover:bg-slate-50')}>
+                <span aria-hidden="true" className={cx('mt-0.5 w-6 h-6 rounded-full shrink-0 inline-flex items-center justify-center text-xs font-bold', ok ? 'bg-emerald-600 text-white' : 'bg-ags-indigo-50 text-ags-indigo')}>{ok ? <Check className="w-3.5 h-3.5" /> : i}</span>
+                <span className={cx('text-[0.86rem] leading-snug flex-1', ok ? 'text-emerald-900' : 'text-ags-navy')}><span className="sr-only">{ok ? `${t('guide.done')}: ` : ''}</span>{t(`guide.s${i}`)}</span>
+                <ArrowRight aria-hidden="true" className="w-4 h-4 mt-0.5 text-ags-indigo flip-rtl shrink-0" />
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="px-4 pb-3 text-xs text-ags-slate">{t('guide.hint')}</p>
+    </aside>
+  );
+}
+
+function SettingsModal({ open, onClose, onReset, onAbout }) {
+  const { t, settings, setSettings, guide, setGuide } = useApp();
+  return (
+    <Modal open={open} onClose={onClose} title={t('settings')} icon={Settings} size="sm" footer={<button type="button" className="btn btn-primary" onClick={onClose}>{t('close')}</button>}>
+      <div className="space-y-6">
+        <div>
+          <p className="label">{t('settings.textSize')}</p>
+          <Segmented full ariaLabel={t('settings.textSize')} value={settings.textSize} onChange={(v) => setSettings((s) => ({ ...s, textSize: v }))}
+            options={[{ value: 's', label: t('settings.size.s') }, { value: 'm', label: t('settings.size.m') }, { value: 'l', label: t('settings.size.l') }, { value: 'xl', label: t('settings.size.xl') }]} />
+        </div>
+        <Switch checked={settings.reduceMotion} onChange={(v) => setSettings((s) => ({ ...s, reduceMotion: v }))} label={t('settings.motion')} hint={t('settings.motion.hint')} />
+        <Switch checked={guide.open} onChange={(v) => setGuide((g) => ({ ...g, open: v }))} label={t('settings.guide')} />
+        <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
+          <button type="button" className="btn btn-secondary" onClick={() => { onClose(); onReset(); }}><RotateCcw aria-hidden="true" className="w-4 h-4" />{t('demo.reset')}</button>
+          <button type="button" className="btn btn-ghost" onClick={() => { onClose(); onAbout(); }}><Info aria-hidden="true" className="w-4 h-4" />{t('demo.about')}</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function Footer({ onAbout }) {
+  const { t } = useApp();
+  return (
+    <footer className="mt-14 pt-5 border-t border-slate-200 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-ags-slate">
+      <span className="font-bold text-ags-indigo" dir="ltr">AGS</span><span>{t('app.name')}</span><span aria-hidden="true">·</span>
+      <button type="button" onClick={onAbout} className="inline-flex items-center gap-1.5 rounded-full bg-ags-gold-50 ring-1 ring-amber-200 px-2.5 py-1 text-ags-navy hover:bg-ags-gold-100">
+        <Info aria-hidden="true" className="w-3.5 h-3.5" />{t('demo.footer')}
+      </button>
+    </footer>
+  );
+}
+
+function H2({ icon: I, children, count, tone }) {
+  return (
+    <h2 className="text-lg font-bold text-ags-navy flex items-center gap-2.5 mb-3">
+      {I && <I aria-hidden="true" className={cx('w-5 h-5', tone || 'text-ags-indigo')} />}{children}
+      {count != null && <span className="text-xs font-bold tabular bg-ags-indigo-50 text-ags-indigo rounded-full px-2 py-0.5">{count}</span>}
+    </h2>
+  );
+}
+
+/* ============================================================================
+ * 10. STUDENT — one list, one button per homework, photos on the same page
+ * ========================================================================== */
+
+function useStudentItems() {
+  const { db, student, now } = useApp();
+  return useMemo(() => Object.values(db.assignments)
+    .filter((a) => isVisibleToStudent(a, student, now))
+    .map((a) => { const sub = db.submissions[subKey(a.id, student.id)]; return { a, sub, st: studentState(a, sub, now) }; }), [db, student, now]);
+}
+
+function lateText(t, fmt, a, now) {
+  const p = a.latePolicy || {};
+  const was = t('card.wasDue', { day: fmt.weekday(a.dueAt) });
+  if (!canSubmit(a, now)) return `${was} · ${t('card.askTeacher')}`;
+  if (p.mode === 'until' && p.until) return `${was} · ${t('card.lateUntil', { day: fmt.weekday(p.until) })}`;
+  return `${was} · ${t('card.lateAny')}`;
+}
+
+function HomeworkCard({ item }) {
+  const { t, fmt, stage, now, navigate } = useApp();
+  const { a, sub, st } = item;
+  const subj = SUBJECTS[a.subject] || SUBJECTS.math;
+  const late = st === 'overdue' || st === 'closed';
+  const ret = st === 'returned' || st === 'revision';
+  const done = st === 'submitted' || st === 'submittedLate';
+  const isNew = st === 'notStarted' && now - a.publishAt < DAY;
+  const action = { notStarted: 'act.start', draft: sub?.resubmitting ? 'act.redo' : 'act.continue', overdue: 'act.late', closed: 'act.open', returned: 'act.feedback', revision: 'act.redo', submitted: 'act.view', submittedLate: 'act.view' }[st];
+  const primary = ['notStarted', 'draft', 'overdue', 'revision'].includes(st);
+  const when = late ? lateText(t, fmt, a, now)
+    : ret ? t('card.returned', { when: agoLabel(t, sub.returnedAt, now) })
+      : done ? t('card.handedIn', { when: agoLabel(t, sub.submittedAt, now) })
+        : stage === 'early' ? (Math.round((startOfDay(a.dueAt) - startOfDay(now)) / DAY) === 1 ? t('due.early.tomorrow') : fmt.weekday(a.dueAt)) : dueLabel(t, fmt, a.dueAt, now);
+  const big = stage === 'early'; const compact = stage === 'senior';
+  return (
+    <button type="button" onClick={() => navigate({ name: 'assignment', id: a.id })}
+      className={cx('card group w-full text-start flex items-center gap-4 hover:shadow-lg transition-shadow relative overflow-hidden', big ? 'p-5 min-h-[7rem]' : compact ? 'px-4 py-3' : 'p-4', late && 'ring-1 ring-amber-300')}>
+      <span aria-hidden="true" className="absolute inset-y-0 start-0 w-1.5" style={{ background: subj.color }} />
+      {big ? <SubjectArt code={a.subject} /> : !compact && <SubjectBadge code={a.subject} />}
+      <span className="flex-1 min-w-0">
+        <SubjectTag code={a.subject} />
+        <span className={cx('block font-bold text-ags-navy leading-snug mt-0.5', big ? 'text-xl' : compact ? 'text-base' : 'text-[1.08rem]')}>
+          <bdi>{a.title}</bdi>{isNew && <span className="ms-2 align-middle text-[0.68rem] font-bold rounded-full bg-ags-gold text-ags-navy px-2 py-0.5">{t('card.new')}</span>}
+        </span>
+        <span className={cx('mt-1 flex items-center gap-1.5', big ? 'text-base' : 'text-sm', late ? 'text-amber-900' : 'text-ags-slate')}>
+          {late ? <AlarmClock aria-hidden="true" className="w-4 h-4 shrink-0" /> : ret ? <MessageSquareText aria-hidden="true" className="w-4 h-4 shrink-0" /> : <Clock aria-hidden="true" className="w-4 h-4 shrink-0" />}
+          <span>{when}</span>
+        </span>
+        {ret && sub.comment && !compact && <span className="mt-1.5 block text-sm text-ags-navy/90 line-clamp-1"><bdi>“{sub.comment}”</bdi></span>}
+      </span>
+      <span className="flex flex-col items-end gap-2 shrink-0">
+        {ret && typeof sub.mark === 'number' && <span className="rounded-lg bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 px-2.5 py-1 font-bold tabular">{fmt.score(sub.mark, a.points)}</span>}
+        {(late || st === 'revision' || done) && <StatusChip status={st} size="sm" />}
+        <span className={cx('btn pointer-events-none', primary ? 'btn-primary' : 'btn-secondary', big ? 'btn-lg' : 'btn-sm')}>{t(action)}<ArrowRight aria-hidden="true" className="w-4 h-4 flip-rtl" /></span>
+      </span>
+    </button>
+  );
+}
+
+function StudentHome() {
+  const { t, fmt, lang, stage, student, now, db, actions, navigate } = useApp();
+  const items = useStudentItems();
+  const [showDone, setShowDone] = useState(false);
+  const upcoming = items.filter((x) => (['notStarted', 'draft'].includes(x.st) && (x.a.dueAt >= now || x.sub?.resubmitting))).sort((p, q) => p.a.dueAt - q.a.dueAt || q.a.publishAt - p.a.publishAt);
+  const late = items.filter((x) => x.st === 'overdue' || (x.st === 'closed' && now - x.a.dueAt < 7 * DAY)).sort((p, q) => p.a.dueAt - q.a.dueAt);
+  const feedback = items.filter((x) => x.st === 'revision' || (x.st === 'returned' && now - (x.sub.returnedAt || 0) < 7 * DAY)).sort((p, q) => (q.sub.returnedAt || 0) - (p.sub.returnedAt || 0));
+  const done = items.filter((x) => ['submitted', 'submittedLate'].includes(x.st) || (x.st === 'returned' && !feedback.includes(x))).sort((p, q) => (q.sub.submittedAt || 0) - (p.sub.submittedAt || 0));
+  const todoCount = upcoming.length + late.filter((x) => x.st === 'overdue').length;
+  const hour = new Date(now).getHours();
+  const greet = stage === 'early' ? t('greet.early', { name: studentFirst(student, lang) }) : t(hour < 12 ? 'greet.morning' : hour < 17 ? 'greet.afternoon' : 'greet.evening', { name: studentFirst(student, lang) });
+  const summary = todoCount ? t.s('home.summary', stage, { n: todoCount }) : t.s('home.allDone', stage);
+  const reminders = db.reminders.filter((r) => r.studentId === student.id && !r.dismissed);
+  const List = ({ xs }) => <div className={cx('grid gap-3', stage === 'early' && 'gap-4')}>{xs.map((x) => <HomeworkCard key={x.a.id} item={x} />)}</div>;
+  return (
+    <div className={cx('max-w-3xl mx-auto', stage === 'early' && 'stage-early')}>
+      <p className="text-sm text-ags-slate">{fmt.dateLong(now)} <span aria-hidden="true">·</span> <span className="text-xs">{fmt.hijri(now)}</span></p>
+      <h1 className={cx('font-bold text-ags-navy mt-1 leading-tight', stage === 'early' ? 'text-4xl' : 'text-3xl')}>{greet}</h1>
+      <p className={cx('mt-2 text-ags-navy flex items-center gap-2', stage === 'early' ? 'text-xl' : 'text-lg')}>
+        {todoCount ? <ListChecks aria-hidden="true" className="w-5 h-5 text-ags-indigo shrink-0" /> : <Star aria-hidden="true" className="w-5 h-5 text-ags-gold fill-current shrink-0" />}{summary}
+      </p>
+
+      {reminders.map((r) => (
+        <div key={r.id} className="card p-4 mt-5 flex flex-wrap items-center gap-3 border-s-4 border-ags-gold">
+          <Bell aria-hidden="true" className="w-5 h-5 text-ags-indigo" />
+          <p className="flex-1 text-sm text-ags-navy min-w-[12rem]">{t('reminder.text', { teacher: teacherName(r.teacherId, lang), title: `⁨${db.assignments[r.assignmentId]?.title}⁩` })}</p>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate({ name: 'assignment', id: r.assignmentId })}>{t('act.open')}</button>
+          <button type="button" className="btn btn-ghost btn-icon" aria-label={t('dismiss')} onClick={() => actions.dismissReminder(r.id)}><X aria-hidden="true" className="w-4 h-4" /></button>
+        </div>
+      ))}
+
+      <section className="mt-8" aria-labelledby="todo-h">
+        <h2 id="todo-h" className="sr-only">{t('home.todo')}</h2>
+        <H2 icon={ListChecks} count={upcoming.length}>{t.s('home.todo', stage)}</H2>
+        {upcoming.length ? <List xs={upcoming} /> : <div className="card"><EmptyState icon={CheckCircle2} title={t.s('home.nothing', stage)} /></div>}
+      </section>
+
+      {late.length > 0 && (
+        <section className="mt-8 rounded-2xl bg-amber-50/70 ring-1 ring-amber-200 p-3 sm:p-4" aria-labelledby="late-h">
+          <h2 id="late-h" className="text-lg font-bold text-amber-950 flex items-center gap-2.5"><AlarmClock aria-hidden="true" className="w-5 h-5 text-amber-700" />{t('home.late')}</h2>
+          <p className="text-sm text-amber-900 mt-0.5 mb-3">{t('home.late.hint')}</p>
+          <List xs={late} />
+        </section>
+      )}
+
+      <section className="mt-10" aria-labelledby="fb-h">
+        <h2 id="fb-h" className="sr-only">{t('home.feedback')}</h2>
+        <H2 icon={MessageSquareText} tone="text-emerald-700" count={feedback.length}>{t.s('home.feedback', stage)}</H2>
+        {feedback.length ? <List xs={feedback} /> : <div className="card"><EmptyState icon={MessageSquareText} title={t('home.noFeedback')} /></div>}
+      </section>
+
+      {done.length > 0 && (
+        <section className="mt-10">
+          <button type="button" className="btn btn-ghost -ms-3" aria-expanded={showDone} aria-controls="done-list" onClick={() => setShowDone((v) => !v)}>
+            <CheckCheck aria-hidden="true" className="w-5 h-5" />{showDone ? t('home.hideDone') : t('home.showDone', { n: done.length })}<ChevronDown aria-hidden="true" className={cx('w-4 h-4 transition-transform', showDone && 'rotate-180')} />
+          </button>
+          <div id="done-list" hidden={!showDone} className="mt-3">{showDone && <List xs={done} />}</div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/* ---------- homework page ---------- */
+
+const MATCH_ORDER = (b) => b.pairs.map((_, i) => i).sort((x, y) => hashStr(`${b.id}${x}`) - hashStr(`${b.id}${y}`));
+const fmtSize = (n) => (n > 1e6 ? `${round1(n / 1e6)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+function readFileMeta(file) {
+  return new Promise((resolve) => {
+    const meta = { id: uid('f'), name: file.name, size: file.size, type: file.type };
+    if (!file.type.startsWith('image/') || file.size > 8e6) { resolve(meta); return; }
+    const url = URL.createObjectURL(file);
+    downscaleImage(url, 900).then((r) => resolve({ ...meta, src: r.src })).catch(() => resolve(meta)).finally(() => URL.revokeObjectURL(url));
+  });
+}
+
+function PhotoPages({ pages, onChange, editable, preview }) {
+  const { t, stage, student, toast } = useApp();
   const [busy, setBusy] = useState(false);
-  const [crop, setCrop] = useState(null);
-  const [note, setNote] = useState(sub?.note || '');
-  const [doneInfo, setDoneInfo] = useState(null);
+  const [samples, setSamples] = useState(false);
   const camRef = useRef(null); const galRef = useRef(null);
-  const noteTimer = useRef(null);
-
-  if (!a || !block) return <div className="card"><EmptyState title={t('a.notFound')} /></div>;
-  const editable = (!sub || sub.status === 'draft') && canSubmit(a, now, sub);
-  const paperOnly = a.blocks.every((b) => b.type === 'paper');
-  const setPages = (next) => actions.setPages(a.id, student.id, block.id, next);
-  const cur = pages[clamp(sel, 0, Math.max(0, pages.length - 1))];
-
-  const addPages = (list) => { if (!list.length) return; const next = [...pages, ...list]; setPages(next); setSel(next.length - 1); setStep('edit'); setShowSamples(false); };
+  const add = (list) => { if (list.length) onChange([...pages, ...list]); setSamples(false); };
   const onFiles = async (e) => {
     const files = [...(e.target.files || [])]; e.target.value = '';
     if (!files.length) return;
-    setBusy(true);
-    const out = [];
+    setBusy(true); const out = [];
     for (const f of files) {
-      if (!f.type.startsWith('image/')) { toast(t('p.err.type'), { kind: 'warn' }); continue; }
+      if (!f.type.startsWith('image/')) { toast(t('photo.notImage'), { kind: 'warn' }); continue; }
       const url = URL.createObjectURL(f);
       try { const r = await downscaleImage(url, 1600); out.push({ id: uid('pg'), src: r.src, name: f.name }); }
-      catch { toast(t('p.err.load'), { kind: 'warn' }); }
+      catch { toast(t('photo.err'), { kind: 'warn' }); }
       finally { URL.revokeObjectURL(url); }
     }
-    setBusy(false); addPages(out);
+    setBusy(false); add(out);
   };
-  const useSample = (kind) => addPages([{ id: uid('pg'), sample: kind, name: studentFirst(student, kind === 'letters' ? 'ar' : 'en') }]);
-  const update = (i, patch) => setPages(pages.map((p, j) => (j === i ? { ...p, ...patch } : p)));
-  const rotate = async () => {
-    if (!cur) return; setBusy(true);
-    try { update(sel, { src: await rotateImage(pageSrc(cur)) }); } catch { toast(t('p.err.load'), { kind: 'warn' }); }
+  const rotate = async (i) => {
+    setBusy(true);
+    try { const src = await rotateImage(pageSrc(pages[i])); onChange(pages.map((p, j) => (j === i ? { ...p, src } : p))); }
+    catch { toast(t('photo.err'), { kind: 'warn' }); }
     setBusy(false);
   };
-  const applyCrop = async () => {
-    if (!cur || !crop) return; setBusy(true);
-    try { update(sel, { src: await cropImage(pageSrc(cur), crop) }); toast(t('p.cropped'), { kind: 'success' }); } catch { toast(t('p.err.load'), { kind: 'warn' }); }
-    setBusy(false); setCrop(null);
+  const remove = (i) => { const before = pages; onChange(pages.filter((_, j) => j !== i)); toast(t('photo.deleted'), { kind: 'info', action: { label: t('undo'), onClick: () => onChange(before) } }); };
+  const big = stage === 'early';
+  return (
+    <div>
+      {editable && (
+        <>
+          <input ref={camRef} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={onFiles} />
+          <input ref={galRef} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={onFiles} />
+          <div className="grid sm:grid-cols-2 gap-3">
+            <button type="button" disabled={preview} onClick={() => camRef.current?.click()} className={cx('btn btn-gold btn-lg w-full', big && 'min-h-[4.5rem] text-xl')}><Camera aria-hidden="true" className="w-6 h-6" />{t('photo.take')}</button>
+            <button type="button" disabled={preview} onClick={() => galRef.current?.click()} className={cx('btn btn-secondary btn-lg w-full', big && 'min-h-[4.5rem] text-xl')}><Upload aria-hidden="true" className="w-5 h-5" />{t('photo.upload')}</button>
+          </div>
+          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span className="text-ags-slate">{t('photo.tip')}</span>
+            {!preview && <button type="button" className="text-ags-indigo font-medium underline underline-offset-4 hover:no-underline rounded" aria-expanded={samples} onClick={() => setSamples((v) => !v)}>{t('photo.sample')}</button>}
+          </div>
+          {samples && (
+            <div className="mt-3 grid grid-cols-3 gap-3 ags-fade-up">
+              {SAMPLE_SETS[stage].map((k) => (
+                <button key={k} type="button" onClick={() => add([{ id: uid('pg'), sample: k, name: studentFirst(student, k === 'letters' ? 'ar' : 'en') }])} className="rounded-xl ring-1 ring-slate-200 hover:ring-2 hover:ring-ags-indigo overflow-hidden bg-white text-start">
+                  <img src={sampleUri(k, studentFirst(student, k === 'letters' ? 'ar' : 'en'))} alt="" className="w-full aspect-[3/4] object-cover" />
+                  <span className="block text-xs font-medium p-2 text-ags-navy">{t(SAMPLE_LABEL[k])}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      {busy && <p role="status" className="mt-3 text-sm text-ags-slate inline-flex items-center gap-2"><Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />{t('photo.busy')}</p>}
+      {pages.length > 0 && (
+        <ol className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3" aria-label={t('photo.count', { n: pages.length })}>
+          {pages.map((p, i) => (
+            <li key={p.id} className="relative">
+              <img src={pageSrc(p)} alt={t('photo.page', { n: i + 1 })} className="w-full aspect-[3/4] object-cover rounded-xl ring-1 ring-slate-200 bg-white" />
+              <span className="absolute top-2 start-2 text-xs font-bold bg-ags-navy text-white rounded-md px-2 py-0.5">{t('photo.page', { n: i + 1 })}</span>
+              {editable && (
+                <span className="absolute bottom-2 inset-x-2 flex justify-center gap-2">
+                  <button type="button" onClick={() => rotate(i)} disabled={busy} className="btn btn-sm bg-white/95 text-ags-navy shadow ring-1 ring-slate-200" aria-label={`${t('photo.rotate')} — ${t('photo.page', { n: i + 1 })}`}><RotateCw aria-hidden="true" className="w-4 h-4" /><span className="hidden sm:inline">{t('photo.rotate')}</span></button>
+                  <button type="button" onClick={() => remove(i)} className="btn btn-sm bg-white/95 text-rose-700 shadow ring-1 ring-slate-200" aria-label={`${t('photo.delete')} — ${t('photo.page', { n: i + 1 })}`}><Trash2 aria-hidden="true" className="w-4 h-4" /></button>
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+/** One question. Labels are kept to a minimum: the question, the answer, nothing else. */
+function Question({ a, b, index, total, value, onChange, readOnly, showResults, highlight, preview }) {
+  const { t, fmt, stage } = useApp();
+  const cdir = a.lang === 'ar' ? 'rtl' : 'ltr';
+  const big = stage === 'early';
+  const name = `q_${b.id}`;
+  const ok = showResults && isAuto(b) ? scoreBlock(b, value) >= b.points : null;
+  const opt = (on, good, bad) => cx('flex items-center gap-3 rounded-xl px-4 py-3 transition-colors', big && 'py-4 text-lg',
+    good ? 'ring-1 ring-emerald-300 bg-emerald-50' : bad ? 'ring-1 ring-rose-300 bg-rose-50' : on ? 'ring-2 ring-ags-indigo bg-ags-indigo-50' : 'ring-1 ring-slate-200 bg-white', !readOnly && 'cursor-pointer hover:ring-ags-indigo');
+  let body = null;
+  if (b.type === 'paper') body = <PhotoPages pages={Array.isArray(value) ? value : []} onChange={onChange} editable={!readOnly} preview={preview} />;
+  else if (b.type === 'mcq' || b.type === 'tf') {
+    const opts = b.type === 'tf' ? [{ v: true, l: t('q.true') }, { v: false, l: t('q.false') }] : b.options.map((o, i) => ({ v: i, l: o }));
+    body = (
+      <div className={cx('grid gap-2', b.type === 'tf' && 'grid-cols-2')} role="radiogroup" aria-labelledby={`${name}_p`}>
+        {opts.map((o) => {
+          const on = value === o.v; const good = showResults && o.v === b.correct; const bad = showResults && on && !good;
+          return (
+            <label key={String(o.v)} className={opt(on, good, bad)}>
+              <input type="radio" name={name} checked={on} disabled={readOnly} onChange={() => onChange(o.v)} />
+              <span className="flex-1" dir={b.type === 'tf' ? undefined : cdir}>{o.l}</span>
+              {good && <CheckCircle2 aria-label={t('fb.correctAnswer')} className="w-5 h-5 text-emerald-600" />}
+              {bad && <X aria-label={t('fb.yourAnswer')} className="w-5 h-5 text-rose-600" />}
+            </label>
+          );
+        })}
+      </div>
+    );
+  } else if (b.type === 'checkbox') {
+    const cur = Array.isArray(value) ? value : [];
+    body = <div className="grid gap-2">{b.options.map((o, i) => { const on = cur.includes(i); return <label key={i} className={opt(on, showResults && (b.correct || []).includes(i), showResults && on && !(b.correct || []).includes(i))}><input type="checkbox" checked={on} disabled={readOnly} onChange={() => onChange(on ? cur.filter((x) => x !== i) : [...cur, i])} /><span className="flex-1" dir={cdir}>{o}</span></label>; })}</div>;
+  } else if (b.type === 'short') {
+    body = <input className={cx('input', big && 'text-lg')} dir="auto" value={value || ''} readOnly={readOnly} placeholder={readOnly ? '' : t('q.typeHere')} aria-labelledby={`${name}_p`} onChange={(e) => onChange(e.target.value)} />;
+  } else if (b.type === 'long') {
+    body = <textarea className="input min-h-[10rem]" dir="auto" value={value || ''} readOnly={readOnly} placeholder={readOnly ? '' : t('q.typeHere')} aria-labelledby={`${name}_p`} onChange={(e) => onChange(e.target.value)} />;
+  } else if (b.type === 'match') {
+    const cur = value || {};
+    body = (
+      <div className="grid gap-2">
+        {b.pairs.map((p, i) => (
+          <div key={i} className={cx('grid sm:grid-cols-[1fr_1.4fr] gap-2 items-center rounded-xl p-2.5 ring-1', showResults ? (cur[i] === i ? 'ring-emerald-300 bg-emerald-50' : 'ring-rose-300 bg-rose-50') : 'ring-slate-200 bg-white')}>
+            <span id={`${name}_l${i}`} className="font-bold text-ags-navy px-1" dir={cdir}>{p.left}</span>
+            <select className="input" dir={cdir} aria-labelledby={`${name}_l${i}`} disabled={readOnly} value={cur[i] ?? ''} onChange={(e) => onChange({ ...cur, [i]: e.target.value === '' ? undefined : Number(e.target.value) })}>
+              <option value="">{t('q.choose')}</option>
+              {MATCH_ORDER(b).map((j) => <option key={j} value={j}>{b.pairs[j].right}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+    );
+  } else if (b.type === 'file') {
+    const files = Array.isArray(value) ? value : [];
+    body = (
+      <div>
+        {files.length > 0 && <ul className="grid gap-2 mb-3">{files.map((f) => (
+          <li key={f.id} className="flex items-center gap-3 rounded-xl ring-1 ring-slate-200 bg-white p-2.5">
+            <span className="w-10 h-10 rounded-lg bg-ags-indigo-50 text-ags-indigo flex items-center justify-center overflow-hidden shrink-0">{f.src ? <img src={f.src} alt="" className="w-full h-full object-cover" /> : <FileText aria-hidden="true" className="w-5 h-5" />}</span>
+            <span className="flex-1 min-w-0"><span className="block text-sm font-medium truncate" dir="auto">{f.name}</span><span className="block text-xs text-ags-slate tabular">{fmtSize(f.size || 0)}</span></span>
+            {!readOnly && <button type="button" className="btn btn-ghost btn-icon" aria-label={`${t('photo.delete')}: ${f.name}`} onClick={() => onChange(files.filter((x) => x.id !== f.id))}><Trash2 aria-hidden="true" className="w-4 h-4" /></button>}
+          </li>))}</ul>}
+        {!readOnly && <label className={cx('btn btn-secondary cursor-pointer', preview && 'pointer-events-none opacity-60')}><Upload aria-hidden="true" className="w-4 h-4" />{t('q.addFile')}<input type="file" className="sr-only" multiple disabled={preview} onChange={async (e) => { const fl = [...e.target.files]; e.target.value = ''; onChange([...files, ...(await Promise.all(fl.map(readFileMeta)))]); }} /></label>}
+      </div>
+    );
+  }
+  return (
+    <section id={`q-${b.id}`} aria-labelledby={`${name}_p`} className={cx('card p-5 sm:p-6 scroll-mt-24', highlight && 'ring-2 ring-amber-400')}>
+      {total > 1 && <p className="text-xs font-bold text-ags-indigo mb-1">{t('q.of', { n: index + 1, total })}</p>}
+      <div className="flex items-start gap-3 mb-3">
+        <h2 id={`${name}_p`} className={cx('font-bold text-ags-navy flex-1 leading-relaxed', big ? 'text-xl' : 'text-[1.06rem]')} dir={b.type === 'paper' ? undefined : cdir}>{b.type === 'paper' ? t('photo.title') : b.prompt}</h2>
+        {ok === true && <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-800 bg-emerald-50 ring-1 ring-emerald-200 rounded-full px-2 py-0.5"><Check aria-hidden="true" className="w-3.5 h-3.5" />{t('fb.correct')}</span>}
+        {ok === false && <span className="inline-flex items-center gap-1 text-xs font-medium text-rose-800 bg-rose-50 ring-1 ring-rose-200 rounded-full px-2 py-0.5"><X aria-hidden="true" className="w-3.5 h-3.5" />{t('fb.wrong')}</span>}
+      </div>
+      {b.type === 'paper' && b.prompt && <p className="text-sm text-ags-slate -mt-2 mb-4" dir="auto">{b.prompt}</p>}
+      {highlight && <p className="text-sm text-amber-900 mb-3 flex items-center gap-1.5"><AlertCircle aria-hidden="true" className="w-4 h-4" />{t('q.needed')}</p>}
+      {body}
+    </section>
+  );
+}
+
+function WorksheetButton({ a }) {
+  const { t } = useApp();
+  const [open, setOpen] = useState(null);
+  const list = (a.attachments || []).filter((x) => x.kind !== 'link');
+  if (!list.length) return null;
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      {list.map((x) => <button key={x.id} type="button" className="btn btn-secondary" onClick={() => setOpen(x)}><FileText aria-hidden="true" className="w-4 h-4" />{x.kind === 'worksheet' ? t('a.openWorksheet') : <bdi>{x.name}</bdi>}</button>)}
+      <Modal open={!!open} onClose={() => setOpen(null)} title={open?.name || ''} icon={FileText} footer={<button type="button" className="btn btn-primary" onClick={() => setOpen(null)}>{t('close')}</button>}>
+        {open && (open.kind === 'image' && open.src ? <img src={open.src} alt={open.name} className="w-full rounded-lg" /> : <DocPreview att={open} a={a} />)}
+        <p className="hint mt-3">{t('att.mockNote')}</p>
+      </Modal>
+    </div>
+  );
+}
+
+function FeedbackBox({ a, sub }) {
+  const { t, fmt, lang, now, actions, student, toast } = useApp();
+  const pages = a.blocks.filter((b) => b.type === 'paper').flatMap((b) => sub.answers[b.id] || []);
+  const marked = pages.filter((p) => (sub.annotations || {})[p.id]?.length);
+  return (
+    <section aria-labelledby="fb-title" className="card p-5 sm:p-6 mb-5 border-t-4 border-emerald-500">
+      <div className="flex flex-wrap items-start gap-5">
+        <div className="text-center rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 px-6 py-4">
+          <p className="text-xs text-emerald-900 font-medium">{t('fb.mark')}</p>
+          <p className="text-3xl font-bold text-emerald-900 tabular mt-1">{fmt.n(sub.mark ?? 0)}<span className="text-lg text-emerald-800"> / {fmt.n(a.points)}</span></p>
+        </div>
+        <div className="flex-1 min-w-[14rem]">
+          <h2 id="fb-title" className="font-bold text-ags-navy text-lg">{t('fb.from', { teacher: teacherShort(a.teacherId, lang) })}</h2>
+          {sub.returnedAt && <p className="text-xs text-ags-slate">{agoLabel(t, sub.returnedAt, now)}</p>}
+          {sub.comment && <blockquote className="mt-3 rounded-xl bg-slate-50 p-3.5 text-ags-navy leading-relaxed" dir="auto">{sub.comment}</blockquote>}
+        </div>
+      </div>
+      {sub.status === 'revision' && (
+        <div className="mt-5 rounded-xl bg-amber-50 ring-1 ring-amber-200 p-4 flex flex-wrap items-center gap-3">
+          <RotateCcw aria-hidden="true" className="w-5 h-5 text-amber-700" />
+          <p className="flex-1 text-amber-950 min-w-[12rem]">{t('fb.redo')}</p>
+          <button type="button" className="btn btn-primary" onClick={() => { actions.startRedo(a.id, student.id); toast(t('fb.redoStarted'), { kind: 'info' }); }}>{t('act.redo')}</button>
+        </div>
+      )}
+      {marked.length > 0 && (
+        <div className="mt-5">
+          <p className="text-sm font-bold text-ags-navy mb-2">{t('fb.onPhotos')}</p>
+          <div className="grid sm:grid-cols-2 gap-4">{marked.map((p) => <AnnotatedPage key={p.id} src={pageSrc(p)} annotations={sub.annotations[p.id]} alt={t('photo.page', { n: pages.indexOf(p) + 1 })} />)}</div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AssignmentPage({ id }) {
+  const { t, fmt, lang, stage, student, now, db, actions, navigate, guide, markGuide } = useApp();
+  const a = db.assignments[id];
+  const sub = a ? db.submissions[subKey(a.id, student.id)] : null;
+  const [answers, setAnswers] = useState(() => ({ ...(sub?.answers || {}) }));
+  const [savedAt, setSavedAt] = useState(null);
+  const [tried, setTried] = useState(false);
+  const [done, setDone] = useState(null);
+  const timer = useRef(null); const latest = useRef(answers); latest.current = answers;
+  const st = a ? studentState(a, sub, now) : null;
+  useEffect(() => { setAnswers({ ...(sub?.answers || {}) }); }, [sub?.status, sub?.resubmitting, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { if (timer.current) { clearTimeout(timer.current); actions.saveDraft(id, student.id, latest.current); } }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (a && guide.aid === a.id && student.id === 's_omar' && (st === 'returned' || st === 'revision')) markGuide(4); }, [a, st, guide.aid, student.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!a || !isVisibleToStudent(a, student, now)) return <div className="card max-w-3xl mx-auto"><EmptyState title={t('a.notFound')} action={<button type="button" className="btn btn-primary" onClick={() => navigate({ name: 'home' })}>{t('back.home')}</button>} /></div>;
+
+  const editable = (!sub || sub.status === 'draft') && canSubmit(a, now, sub);
+  const showResults = ['returned', 'revision'].includes(sub?.status);
+  const missing = a.blocks.filter((b) => b.required && !isAnswered(b, answers[b.id]));
+  const save = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } actions.saveDraft(a.id, student.id, latest.current); setSavedAt(Date.now()); };
+  const setAnswer = (bid, v) => {
+    setAnswers((p) => ({ ...p, [bid]: v }));
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(save, 600);
   };
-  const move = (i, d) => { const j = i + d; if (j < 0 || j >= pages.length) return; const next = [...pages]; [next[i], next[j]] = [next[j], next[i]]; setPages(next); setSel(j); };
-  const remove = (i) => {
-    const removed = pages[i]; const before = pages;
-    const next = pages.filter((_, j) => j !== i); setPages(next); setSel(clamp(i - 1, 0, Math.max(0, next.length - 1)));
-    if (!next.length) setStep('add');
-    toast(t('p.deleted'), { kind: 'info', action: { label: t('undo'), onClick: () => { setPages(before); setStep('edit'); } } });
-    return removed;
-  };
-  const changeNote = (v) => { setNote(v); if (noteTimer.current) clearTimeout(noteTimer.current); noteTimer.current = setTimeout(() => actions.saveNote(a.id, student.id, v), 500); };
-  const back = () => { if (noteTimer.current) { clearTimeout(noteTimer.current); actions.saveNote(a.id, student.id, note); } navigate({ name: 'assignment', id: a.id }); };
-  const submit = () => {
-    if (noteTimer.current) { clearTimeout(noteTimer.current); }
-    actions.saveNote(a.id, student.id, note);
-    const res = actions.submit(a.id, student.id, { ...(sub?.answers || {}), [block.id]: pages });
-    setDoneInfo(res); setStep('done'); window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handIn = () => {
+    if (missing.length) { setTried(true); document.getElementById(`q-${missing[0].id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    save();
+    setDone(actions.submit(a.id, student.id, latest.current));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const steps = [['add', 'p.step1'], ['edit', 'p.step2'], ['preview', 'p.step3']];
-  const stepIdx = step === 'done' ? 3 : steps.findIndex(([k]) => k === step);
-
-  if (step === 'done' && doneInfo) {
+  if (done) {
     const early = stage === 'early';
     return (
       <div className="max-w-xl mx-auto text-center card p-8 sm:p-10 ags-fade-up">
         {settingsReduce() ? <CheckCircle2 aria-hidden="true" className="w-20 h-20 mx-auto text-emerald-600" /> : <SuccessCheck early={early} />}
-        <h1 className={cx('font-bold text-ags-navy mt-5', early ? 'text-3xl' : 'text-2xl')} role="status">{early ? t('done.early') : doneInfo.late ? t('done.lateDays', { n: doneInfo.daysLate }) : t('done.onTime')}</h1>
-        <p className="text-ags-slate mt-2">{doneInfo.late ? t('done.lateHelp') : t('done.pages', { n: pages.length })}</p>
-        <div className="mt-6 flex justify-center gap-2 flex-wrap">
-          {pages.slice(0, 4).map((p, i) => <img key={p.id} src={pageSrc(p)} alt={t('p.page', { n: i + 1 })} className="w-16 h-20 object-cover rounded-lg ring-1 ring-slate-200" />)}
-        </div>
-        <div className="mt-7 flex flex-wrap justify-center gap-2">
-          <button type="button" className={cx('btn btn-primary', early && 'btn-lg')} onClick={() => navigate({ name: 'home' })}><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('back.home')}</button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate({ name: 'assignment', id: a.id })}>{t('done.view')}</button>
-        </div>
+        <h1 role="status" className={cx('font-bold text-ags-navy mt-5', early ? 'text-3xl' : 'text-2xl')}>{early ? t('done.early') : done.late ? t('done.late', { n: done.daysLate }) : t('done.onTime')}</h1>
+        <p className="text-ags-slate mt-2">{t('done.next', { teacher: teacherShort(a.teacherId, lang) })}</p>
+        <button type="button" className="btn btn-primary btn-lg mt-7" onClick={() => navigate({ name: 'home' })}><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('back.home')}</button>
       </div>
     );
   }
 
-  if (!editable) {
-    return <div className="card"><EmptyState title={t('p.locked')} action={<button type="button" className="btn btn-primary" onClick={back}>{t('back')}</button>} /></div>;
-  }
-
+  const over = now > a.dueAt;
   return (
-    <div className="max-w-5xl mx-auto">
-      <button type="button" onClick={back} className="btn btn-ghost btn-sm -ms-2 mb-3"><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('p.backTo')}</button>
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
-        <div>
-          <SubjectTag code={a.subject} />
-          <h1 className="text-2xl sm:text-3xl font-bold text-ags-navy mt-1">{t('p.title')}</h1>
-          <p className="text-ags-slate mt-0.5" dir="auto">{a.title} · {dueLabel(t, fmt, a.dueAt, now)}</p>
-        </div>
-        <ol className="flex items-center gap-2 text-sm" aria-label={t('p.title')}>
-          {steps.map(([k, label], i) => (
-            <li key={k} className="flex items-center gap-2" aria-current={i === stepIdx ? 'step' : undefined}>
-              <span className={cx('w-7 h-7 rounded-full inline-flex items-center justify-center text-xs font-bold', i < stepIdx ? 'bg-emerald-600 text-white' : i === stepIdx ? 'bg-ags-indigo text-white' : 'bg-slate-200 text-slate-600')}>{i < stepIdx ? <Check aria-hidden="true" className="w-4 h-4" /> : fmt.n(i + 1)}</span>
-              <span className={cx('hidden sm:inline', i === stepIdx ? 'font-bold text-ags-navy' : 'text-ags-slate')}>{t(label)}</span>
-              {i < steps.length - 1 && <span aria-hidden="true" className="w-6 h-px bg-slate-300" />}
-            </li>
-          ))}
-        </ol>
+    <div className={cx('max-w-3xl mx-auto', stage === 'early' && 'stage-early')}>
+      <button type="button" onClick={() => { save(); navigate({ name: 'home' }); }} className="btn btn-ghost -ms-3 mb-3"><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('back.home')}</button>
+      <header className="card p-5 sm:p-6 mb-5 relative overflow-hidden">
+        <span aria-hidden="true" className="absolute inset-y-0 start-0 w-1.5" style={{ background: SUBJECTS[a.subject]?.color }} />
+        <SubjectTag code={a.subject} />
+        <h1 className={cx('font-bold text-ags-navy mt-1 leading-tight', stage === 'early' ? 'text-3xl' : 'text-2xl sm:text-3xl')}><bdi>{a.title}</bdi></h1>
+        <p className="text-ags-slate mt-1.5">{teacherName(a.teacherId, lang)} · {over ? t('card.wasDue', { day: `${fmt.date(a.dueAt)}, ${fmt.time(a.dueAt)}` }) : dueLabel(t, fmt, a.dueAt, now)}</p>
+        {['submitted', 'graded'].includes(sub?.status) && <p className="mt-3 inline-flex items-center gap-2 rounded-lg bg-ags-indigo-50 text-ags-indigo px-3 py-1.5 text-sm font-medium"><Send aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('a.handedIn', { when: `${fmt.date(sub.submittedAt)}, ${fmt.time(sub.submittedAt)}` })}{sub.late ? ` · ${t('late.days', { n: lateDays(a.dueAt, sub.submittedAt) })}` : ''}</p>}
+        {st === 'overdue' && editable && <p className="mt-3 rounded-lg bg-amber-50 ring-1 ring-amber-200 text-amber-950 px-3 py-2 text-sm flex gap-2"><AlarmClock aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0" />{a.latePolicy?.mode === 'until' ? t('a.lateUntil', { day: fmt.date(a.latePolicy.until) }) : t('a.lateAny')}</p>}
+        {!editable && (!sub || sub.status === 'draft') && <p className="mt-3 rounded-lg bg-rose-50 ring-1 ring-rose-200 text-rose-950 px-3 py-2 text-sm flex gap-2"><Info aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0" />{t('a.closed')}</p>}
+      </header>
+
+      {showResults && <FeedbackBox a={a} sub={sub} />}
+
+      {(a.instructions || a.attachments?.length > 0) && (
+        <section className="card p-5 sm:p-6 mb-5" aria-labelledby="todo-instr">
+          <h2 id="todo-instr" className="font-bold text-ags-navy mb-2">{t('a.whatToDo')}</h2>
+          {a.instructions && <p className={cx('text-ags-navy/90 leading-relaxed whitespace-pre-wrap', stage === 'early' && 'text-lg')} dir={a.lang === 'ar' ? 'rtl' : 'auto'}>{a.instructions}</p>}
+          <WorksheetButton a={a} />
+        </section>
+      )}
+
+      <div className="space-y-4">
+        {a.blocks.map((b, i) => (
+          <Question key={b.id} a={a} b={b} index={i} total={a.blocks.length} value={answers[b.id]} onChange={(v) => setAnswer(b.id, v)} readOnly={!editable} showResults={showResults} highlight={tried && missing.includes(b)} />
+        ))}
       </div>
 
-      <input ref={camRef} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={onFiles} />
-      <input ref={galRef} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={onFiles} />
-
-      {(step === 'add' || showSamples) && (
-        <section className="card p-5 sm:p-6 mb-5" aria-labelledby="add-h">
-          <h2 id="add-h" className="font-bold text-ags-navy text-lg mb-4">{pages.length ? t('p.add') : t('p.step1')}</h2>
-          <div className="grid sm:grid-cols-3 gap-3">
-            <button type="button" onClick={() => camRef.current?.click()} className="rounded-2xl ring-1 ring-slate-200 hover:ring-ags-indigo hover:bg-ags-indigo-50/50 p-5 text-start transition flex sm:flex-col gap-4 items-start">
-              <span className="w-12 h-12 rounded-2xl bg-ags-gold text-ags-navy inline-flex items-center justify-center shrink-0"><Camera aria-hidden="true" className="w-6 h-6" /></span>
-              <span><span className="block font-bold text-ags-navy">{t('p.take')}</span><span className="block text-sm text-ags-slate mt-0.5">{t('p.take.hint')}</span></span>
-            </button>
-            <button type="button" onClick={() => galRef.current?.click()} className="rounded-2xl ring-1 ring-slate-200 hover:ring-ags-indigo hover:bg-ags-indigo-50/50 p-5 text-start transition flex sm:flex-col gap-4 items-start">
-              <span className="w-12 h-12 rounded-2xl bg-ags-indigo text-white inline-flex items-center justify-center shrink-0"><Upload aria-hidden="true" className="w-6 h-6" /></span>
-              <span><span className="block font-bold text-ags-navy">{t('p.upload')}</span><span className="block text-sm text-ags-slate mt-0.5">{t('p.upload.hint')}</span></span>
-            </button>
-            <button type="button" onClick={() => setShowSamples((v) => !v || !pages.length)} aria-expanded={showSamples} className={cx('rounded-2xl ring-1 p-5 text-start transition flex sm:flex-col gap-4 items-start', showSamples ? 'ring-ags-indigo bg-ags-indigo-50/60' : 'ring-slate-200 hover:ring-ags-indigo hover:bg-ags-indigo-50/50')}>
-              <span className="w-12 h-12 rounded-2xl bg-ags-indigo-100 text-ags-indigo inline-flex items-center justify-center shrink-0"><ImageIcon aria-hidden="true" className="w-6 h-6" /></span>
-              <span><span className="block font-bold text-ags-navy">{t('p.sample')}</span><span className="block text-sm text-ags-slate mt-0.5">{t('p.sample.hint')}</span></span>
+      {editable && (
+        <div className="sticky bottom-0 z-20 mt-6 -mx-4 px-4 pb-4 pt-3 bg-gradient-to-t from-ags-bg via-ags-bg to-ags-bg/0">
+          <div className="card p-3 sm:p-4 flex flex-wrap items-center gap-3 shadow-lg">
+            <span className="text-sm flex-1 min-w-[10rem]" aria-live="polite">
+              {tried && missing.length ? <span className="text-amber-900 inline-flex items-center gap-1.5"><AlertCircle aria-hidden="true" className="w-4 h-4" />{t('a.missing', { n: missing.length })}</span>
+                : <span className="text-ags-slate inline-flex items-center gap-1.5"><CheckCircle2 aria-hidden="true" className="w-4 h-4 text-emerald-600" />{savedAt || sub?.draftSavedAt ? t('a.saved') : t('a.autosave')}</span>}
+            </span>
+            <button type="button" className={cx('btn btn-primary btn-lg', stage === 'early' && 'min-h-[3.75rem] text-xl px-8')} onClick={handIn}>
+              <Send aria-hidden="true" className="w-5 h-5 flip-rtl" />{sub?.resubmitting ? t('resubmit') : t('submit')}
             </button>
           </div>
-          {showSamples && (
-            <div className="mt-5 ags-fade-up">
-              <p className="label">{t('p.sample.pick')}</p>
-              <div className="grid grid-cols-3 gap-3 max-w-xl">
-                {SAMPLE_SETS[stage].map((k) => (
-                  <button key={k} type="button" onClick={() => useSample(k)} className="group rounded-xl ring-1 ring-slate-200 hover:ring-2 hover:ring-ags-indigo overflow-hidden bg-white text-start">
-                    <img src={sampleUri(k, studentFirst(student, k === 'letters' ? 'ar' : 'en'))} alt="" className="w-full aspect-[3/4] object-cover" />
-                    <span className="block text-xs font-medium p-2 text-ags-navy">{t(SAMPLE_LABEL[k])}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {busy && <p className="mt-4 text-sm text-ags-slate inline-flex items-center gap-2" role="status"><Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />{t('p.processing')}</p>}
-          {!pages.length && (
-            <div className="mt-5 rounded-xl bg-slate-50 p-4">
-              <p className="text-sm font-bold text-ags-navy mb-1.5">{t('p.tips')}</p>
-              <ul className="text-sm text-ags-slate space-y-1">{['p.tip1', 'p.tip2', 'p.tip3'].map((k) => <li key={k} className="flex gap-2"><Check aria-hidden="true" className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />{t(k)}</li>)}</ul>
-            </div>
-          )}
-          {pages.length > 0 && <button type="button" className="btn btn-ghost btn-sm mt-4" onClick={() => { setShowSamples(false); setStep('edit'); }}>{t('cancel')}</button>}
-        </section>
-      )}
-
-      {step === 'edit' && pages.length > 0 && !showSamples && (
-        <div className="grid md:grid-cols-[1fr_13rem] gap-5">
-          <section className="card p-4 sm:p-5 min-w-0" aria-label={t('p.page', { n: sel + 1 })}>
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <h2 className="font-bold text-ags-navy me-auto">{t('p.pageOf', { n: sel + 1, total: pages.length })}</h2>
-              {!crop ? (
-                <>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={rotate} disabled={busy}><RotateCw aria-hidden="true" className="w-4 h-4" />{t('p.rotate')}</button>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setCrop({ x: 0.06, y: 0.05, w: 0.88, h: 0.9 })} disabled={busy}><Crop aria-hidden="true" className="w-4 h-4" />{t('p.crop')}</button>
-                  <button type="button" className="btn btn-danger btn-sm" onClick={() => remove(sel)} disabled={busy}><Trash2 aria-hidden="true" className="w-4 h-4" />{t('p.delete')}</button>
-                </>
-              ) : (
-                <>
-                  {[['p.cropTrim', { x: 0.06, y: 0.05, w: 0.88, h: 0.9 }], ['p.cropTop', { x: 0, y: 0, w: 1, h: 0.55 }], ['p.cropBottom', { x: 0, y: 0.45, w: 1, h: 0.55 }], ['p.cropReset', { x: 0, y: 0, w: 1, h: 1 }]].map(([k, r]) => (
-                    <button key={k} type="button" className="btn btn-ghost btn-sm" onClick={() => setCrop(r)}>{t(k)}</button>
-                  ))}
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setCrop(null)}>{t('cancel')}</button>
-                  <button type="button" className="btn btn-primary btn-sm" onClick={applyCrop} disabled={busy}><Check aria-hidden="true" className="w-4 h-4" />{t('p.cropApply')}</button>
-                </>
-              )}
-            </div>
-            {crop && <p className="hint mb-2">{t('p.cropHint')}</p>}
-            <div className="relative mx-auto max-w-md">
-              <img src={pageSrc(cur)} alt={t('p.page', { n: sel + 1 })} className="w-full h-auto rounded-lg ring-1 ring-slate-200 bg-white block select-none" draggable={false} />
-              {crop && <CropOverlay rect={crop} setRect={setCrop} />}
-              {busy && <div className="absolute inset-0 bg-white/60 flex items-center justify-center rounded-lg" role="status"><Loader2 aria-hidden="true" className="w-8 h-8 animate-spin text-ags-indigo" /><span className="sr-only">{t('p.processing')}</span></div>}
-            </div>
-          </section>
-
-          <aside className="min-w-0" aria-label={t('p.pages')}>
-            <h2 className="text-sm font-bold text-ags-navy mb-2">{t('p.pages')} <span className="text-ags-slate font-normal tabular">({fmt.n(pages.length)})</span></h2>
-            <ol className="flex md:flex-col gap-3 overflow-x-auto md:overflow-visible pb-2">
-              {pages.map((p, i) => (
-                <li key={p.id} className={cx('shrink-0 w-36 md:w-auto rounded-xl p-2 ring-1 transition', i === sel ? 'ring-2 ring-ags-indigo bg-ags-indigo-50/60' : 'ring-slate-200 bg-white')}>
-                  <button type="button" onClick={() => { setSel(i); setCrop(null); }} className="block w-full relative" aria-label={t('p.page', { n: i + 1 })} aria-current={i === sel}>
-                    <img src={pageSrc(p)} alt="" className="w-full h-28 md:h-32 object-cover rounded-lg bg-white" />
-                    <span className="absolute top-1.5 start-1.5 text-xs font-bold bg-ags-navy text-white rounded-md px-1.5 py-0.5 tabular">{fmt.n(i + 1)}</span>
-                  </button>
-                  <div className="flex justify-center gap-1 mt-1.5">
-                    <button type="button" className="btn btn-ghost btn-icon !min-h-[2.1rem] !min-w-[2.1rem]" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`${t('p.moveUp')} — ${t('p.page', { n: i + 1 })}`}><ArrowUp aria-hidden="true" className="w-4 h-4" /></button>
-                    <button type="button" className="btn btn-ghost btn-icon !min-h-[2.1rem] !min-w-[2.1rem]" disabled={i === pages.length - 1} onClick={() => move(i, 1)} aria-label={`${t('p.moveDown')} — ${t('p.page', { n: i + 1 })}`}><ArrowDown aria-hidden="true" className="w-4 h-4" /></button>
-                    <button type="button" className="btn btn-ghost btn-icon !min-h-[2.1rem] !min-w-[2.1rem] text-rose-700" onClick={() => remove(i)} aria-label={`${t('p.delete')} — ${t('p.page', { n: i + 1 })}`}><Trash2 aria-hidden="true" className="w-4 h-4" /></button>
-                  </div>
-                </li>
-              ))}
-              <li className="shrink-0 w-36 md:w-auto">
-                <button type="button" onClick={() => setShowSamples(true)} className="w-full h-full min-h-[8rem] rounded-xl border-2 border-dashed border-ags-indigo/40 text-ags-indigo hover:bg-ags-indigo-50 flex flex-col items-center justify-center gap-1.5 p-3 text-sm font-medium">
-                  <Plus aria-hidden="true" className="w-6 h-6" />{t('p.add')}
-                </button>
-              </li>
-            </ol>
-          </aside>
-
-          <section className="md:col-span-2 card p-5">
-            <label htmlFor="pnote" className="label">{t('p.note')}</label>
-            <textarea id="pnote" className="input min-h-[5rem]" dir="auto" value={note} onChange={(e) => changeNote(e.target.value)} placeholder={t('p.notePh')} />
-            <div className="mt-4 flex flex-wrap gap-2 justify-end">
-              {paperOnly ? (
-                <button type="button" className={cx('btn btn-primary', stage === 'early' && 'btn-lg')} onClick={() => { setStep('preview'); window.scrollTo({ top: 0 }); }}><Eye aria-hidden="true" className="w-4 h-4" />{t('p.previewSubmit')}</button>
-              ) : (
-                <button type="button" className="btn btn-primary" onClick={back}><Check aria-hidden="true" className="w-4 h-4" />{t('p.attach')}</button>
-              )}
-            </div>
-          </section>
         </div>
-      )}
-
-      {step === 'preview' && (
-        <section className="card p-5 sm:p-6" aria-labelledby="pv-h">
-          <h2 id="pv-h" className="font-bold text-ags-navy text-lg">{t('p.reviewTitle')}</h2>
-          <p className="text-ags-slate text-sm mt-1">{t('q.paper.pages', { n: pages.length })}</p>
-          <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pages.map((p, i) => (
-              <figure key={p.id}>
-                <img src={pageSrc(p)} alt={t('p.page', { n: i + 1 })} className="w-full rounded-lg ring-1 ring-slate-200 bg-white" />
-                <figcaption className="text-xs text-ags-slate mt-1 text-center">{t('p.page', { n: i + 1 })}</figcaption>
-              </figure>
-            ))}
-          </div>
-          {note && <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm"><span className="font-medium">{t('p.note')}:</span> <span dir="auto">{note}</span></p>}
-          {now > a.dueAt && <p className="mt-4 rounded-xl bg-amber-50 ring-1 ring-amber-200 p-3 text-sm text-amber-900 flex gap-2"><Clock aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0" />{t('review.lateNote')}</p>}
-          <div className="mt-6 flex flex-wrap gap-2 justify-end">
-            <button type="button" className="btn btn-secondary" onClick={() => setStep('edit')}><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('p.backEdit')}</button>
-            <button type="button" className="btn btn-primary btn-lg" onClick={submit}><Send aria-hidden="true" className="w-4 h-4 flip-rtl" />{sub?.resubmitting ? t('resubmit') : t('submit')}</button>
-          </div>
-        </section>
       )}
     </div>
   );
 }
 
 /* ============================================================================
- * 11. TEACHER VIEWS — Ms. Sarah Hassan, Mathematics 8A / 8B / 8C
+ * 11. TEACHER — set homework, mark it, see who is behind
  * ========================================================================== */
 
-/** Exactly what a student sees (used by the builder preview and list preview). */
-function StudentPreview({ a }) {
-  const { t } = useApp();
-  const [answers, setAnswers] = useState({});
+const toMarkStatus = (s) => s === 'submitted' || s === 'late';
+function firstToMark(db, a, cls, now, afterId) {
+  const roster = ROSTERS[cls] || [];
+  let list = roster;
+  if (afterId) { const i = roster.findIndex((s) => s.id === afterId); list = [...roster.slice(i + 1), ...roster.slice(0, Math.max(0, i))]; }
+  return list.find((s) => toMarkStatus(teacherStatus(a, db.submissions[subKey(a.id, s.id)], now)));
+}
+function supportList(db, cls, now) {
+  const list = teacherAssignments(db).filter((a) => a.classes.includes(cls) && isPublished(a, now) && now - a.dueAt < 42 * DAY);
+  return (ROSTERS[cls] || []).map((stu) => {
+    let miss = 0; const marks = [];
+    list.forEach((a) => { const sub = db.submissions[subKey(a.id, stu.id)]; const st = teacherStatus(a, sub, now); if (st === 'missing') miss += 1; if (sub && typeof sub.mark === 'number' && ['graded', 'returned', 'revision'].includes(st)) marks.push(sub.mark / a.points); });
+    const avg = marks.length ? sum(marks) / marks.length : null;
+    return { stu, miss, avg, flag: miss >= 3 || (avg != null && avg < 0.5) };
+  }).filter((x) => x.flag);
+}
+
+function TeacherHome() {
+  const { t, fmt, lang, now, db, navigate, actions } = useApp();
+  const mine = teacherAssignments(db);
+  const rows = mine.filter((a) => isPublished(a, now)).flatMap((a) => a.classes.map((cls) => ({ a, cls, s: classStats(db, a, cls, now) })));
+  const toMark = rows.filter((r) => r.s.toGrade > 0).sort((x, y) => y.s.toGrade - x.s.toGrade);
+  const recent = rows.filter((r) => r.a.dueAt > now - 10 * DAY).sort((x, y) => (x.a.dueAt > now) === (y.a.dueAt > now) ? x.a.dueAt - y.a.dueAt : x.a.dueAt > now ? -1 : 1);
+  const scheduled = mine.filter((a) => !isPublished(a, now));
+  const help = SARAH_CLASSES.reduce((n, c) => n + supportList(db, c, now).length, 0);
+  const hour = new Date(now).getHours();
+  const startMarking = (r) => { const s = firstToMark(db, r.a, r.cls, now); if (s) navigate({ name: 'mark', id: r.a.id, sid: s.id }); };
   return (
-    <div>
-      <div className="mb-4 rounded-xl bg-ags-gold-50 ring-1 ring-amber-200 px-4 py-3 text-sm text-ags-navy flex gap-2"><Eye aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0" />{t('b.previewBanner')}</div>
-      <AssignmentHeader a={a} st="notStarted" />
-      <section className="card p-5 sm:p-6 mb-5">
-        <h2 className="font-bold text-ags-navy mb-2">{t('a.instructions')}</h2>
-        <p className="text-ags-navy/90 leading-relaxed whitespace-pre-wrap" dir="auto">{a.instructions || '—'}</p>
-        <AttachmentList a={a} attachments={a.attachments} />
-      </section>
-      <div className="space-y-4">
-        {a.blocks.map((b, i) => <QuestionCard key={b.id} a={a} b={b} index={i} value={answers[b.id]} onChange={(v) => setAnswers((p) => ({ ...p, [b.id]: v }))} preview onOpenPaper={() => {}} />)}
-        {!a.blocks.length && <div className="card"><EmptyState title={t('b.empty')} /></div>}
-      </div>
-    </div>
-  );
-}
-
-function ClassChips({ value, onChange, options = SARAH_CLASSES, error, labelId }) {
-  const { lang } = useApp();
-  return (
-    <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-2">
-      {options.map((c) => {
-        const on = value.includes(c);
-        return (
-          <button key={c} type="button" aria-pressed={on} onClick={() => onChange(on ? value.filter((x) => x !== c) : [...value, c].sort())}
-            className={cx('inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm ring-1 min-h-[2.4rem] transition-colors', on ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white text-ags-navy ring-slate-300 hover:ring-ags-indigo', error && !on && 'ring-rose-400')}>
-            {on ? <Check aria-hidden="true" className="w-4 h-4" /> : <Plus aria-hidden="true" className="w-4 h-4" />}{clsLabel(c, lang, true)}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function HoverTip({ tip, children, className, label }) {
-  const [on, setOn] = useState(false);
-  return (
-    <div className={cx('relative', className)} tabIndex={0} aria-label={label} onMouseEnter={() => setOn(true)} onMouseLeave={() => setOn(false)} onFocus={() => setOn(true)} onBlur={() => setOn(false)}>
-      {children}
-      {on && tip && <div role="tooltip" className="absolute z-30 bottom-full mb-2 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 whitespace-nowrap rounded-lg bg-ags-navy text-white text-xs px-2.5 py-1.5 shadow-lg pointer-events-none">{tip}</div>}
-    </div>
-  );
-}
-
-function TeacherDashboard() {
-  const { t, fmt, lang, now, db, navigate } = useApp();
-  const list = teacherAssignments(db).filter((a) => isPublished(a, now));
-  const rows = list.flatMap((a) => a.classes.map((cls) => ({ a, cls, s: classStats(db, a, cls, now) })));
-  const active = list.filter((a) => a.dueAt > now).length;
-  const toGrade = sum(rows.map((r) => r.s.toGrade));
-  const recent = rows.filter((r) => now - r.a.dueAt < 42 * DAY);
-  const missing = sum(recent.map((r) => r.s.missing));
-  const completion = sum(recent.map((r) => r.s.handedIn)) / Math.max(1, sum(recent.map((r) => r.s.total)));
-  const attention = [
-    ...rows.filter((r) => r.s.toGrade > 0).map((r) => ({ key: `g${r.a.id}${r.cls}`, icon: Inbox, tone: 'indigo', text: t('td.att.waiting', { n: r.s.toGrade, cls: clsLabel(r.cls, lang), title: r.a.title }), go: { name: 'submissions', id: r.a.id, cls: r.cls, filter: 'toGrade' }, w: 3 + r.s.toGrade })),
-    ...rows.filter((r) => r.s.graded > 0).map((r) => ({ key: `r${r.a.id}${r.cls}`, icon: BadgeCheck, tone: 'green', text: t('td.att.graded', { n: r.s.graded, cls: clsLabel(r.cls, lang), title: r.a.title }), go: { name: 'submissions', id: r.a.id, cls: r.cls, filter: 'graded' }, w: 2 })),
-    ...rows.filter((r) => r.s.missing > 0 && now - r.a.dueAt < 21 * DAY).map((r) => ({ key: `m${r.a.id}${r.cls}`, icon: AlertCircle, tone: 'red', text: t('td.att.missing', { n: r.s.missing, cls: clsLabel(r.cls, lang), title: r.a.title }), go: { name: 'submissions', id: r.a.id, cls: r.cls, filter: 'missing' }, w: 1 })),
-  ].sort((x, y) => y.w - x.w);
-  const upcoming = rows.filter((r) => r.a.dueAt > now).sort((x, y) => x.a.dueAt - y.a.dueAt);
-  const scheduled = teacherAssignments(db).filter((a) => !isPublished(a, now));
-  const tones = { indigo: 'bg-ags-indigo-50 text-ags-indigo', green: 'bg-emerald-50 text-emerald-700', red: 'bg-rose-50 text-rose-700' };
-  return (
-    <div>
-      <PageHeader title={t('td.greeting', { name: teacherShort('sarah', lang) })} subtitle={`${subjName('math', lang)} · ${clsList(SARAH_CLASSES, lang)} · ${fmt.dateLong(now)}`}
-        actions={<>
-          <button type="button" className="btn btn-gold" onClick={() => navigate({ name: 'create' })}><PlusCircle aria-hidden="true" className="w-4 h-4" />{t('td.new')}</button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate({ name: 'insights' })}><BarChart3 aria-hidden="true" className="w-4 h-4" />{t('nav.insights')}</button>
-        </>} />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-7">
-        <StatCard icon={ClipboardList} value={fmt.n(active)} label={t('td.active')} onClick={() => navigate({ name: 'assignments' })} />
-        <StatCard icon={Inbox} tone="gold" value={fmt.n(toGrade)} label={t('td.toGrade')} onClick={() => navigate({ name: 'grading' })} />
-        <StatCard icon={AlertCircle} tone="red" value={fmt.n(missing)} label={t('td.missing')} hint={t('td.window')} />
-        <StatCard icon={TrendingUp} tone="green" value={fmt.pct(completion)} label={t('td.completion')} hint={t('td.window')} onClick={() => navigate({ name: 'insights' })} />
-      </div>
-      <div className="grid lg:grid-cols-2 gap-5">
-        <section className="card p-5" aria-labelledby="att-h">
-          <SectionTitle id="att-h" icon={Bell} title={t('td.attention')} count={attention.length} />
-          {attention.length ? (
-            <ul className="space-y-2">
-              {attention.slice(0, 7).map((x) => {
-                const I = x.icon;
-                return (
-                  <li key={x.key}>
-                    <button type="button" onClick={() => navigate(x.go)} className="w-full text-start flex items-center gap-3 rounded-xl p-3 ring-1 ring-slate-200 hover:ring-ags-indigo hover:bg-ags-indigo-50/40 transition">
-                      <span className={cx('w-9 h-9 rounded-lg inline-flex items-center justify-center shrink-0', tones[x.tone])}><I aria-hidden="true" className="w-4 h-4" /></span>
-                      <span className="flex-1 text-sm text-ags-navy">{x.text}</span>
-                      <ChevronRight aria-hidden="true" className="w-4 h-4 text-slate-400 flip-rtl" />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : <EmptyState icon={CheckCircle2} title={t('td.att.none')} />}
-        </section>
-        <section className="card p-5" aria-labelledby="up-h">
-          <SectionTitle id="up-h" icon={CalendarClock} title={t('td.upcoming')} count={upcoming.length} />
-          <ul className="space-y-3">
-            {upcoming.map((r) => (
-              <li key={r.a.id + r.cls}>
-                <button type="button" onClick={() => navigate({ name: 'submissions', id: r.a.id, cls: r.cls })} className="w-full text-start rounded-xl p-3 ring-1 ring-slate-200 hover:ring-ags-indigo transition">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-ags-navy flex-1 min-w-0 truncate" dir="auto">{r.a.title}</span>
-                    <span className="text-xs font-bold rounded-full bg-ags-indigo-50 text-ags-indigo px-2 py-0.5">{clsLabel(r.cls, lang)}</span>
-                  </span>
-                  <span className="mt-1 block text-xs text-ags-slate">{dueLabel(t, fmt, r.a.dueAt, now)}</span>
-                  <span className="mt-2 flex items-center gap-3">
-                    <ProgressBar value={r.s.handedIn} max={r.s.total} className="flex-1" label={t('td.handedIn', { n: r.s.handedIn, total: r.s.total })} />
-                    <span className="text-xs text-ags-slate tabular whitespace-nowrap">{t('td.handedIn', { n: r.s.handedIn, total: r.s.total })}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-            {scheduled.map((a) => (
-              <li key={a.id} className="rounded-xl p-3 border border-dashed border-sky-300 bg-sky-50/40">
-                <span className="flex flex-wrap items-center gap-2"><span className="font-medium text-ags-navy flex-1" dir="auto">{a.title}</span><StatusChip status="scheduled" size="sm" /></span>
-                <span className="block text-xs text-ags-slate mt-1">{clsList(a.classes, lang)} · {t('ta.publishes', { when: `${fmt.date(a.publishAt)} · ${fmt.time(a.publishAt)}` })}</span>
-              </li>
-            ))}
-            {!upcoming.length && !scheduled.length && <EmptyState title={t('td.noUpcoming')} />}
-          </ul>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-function DuplicateModal({ a, onClose }) {
-  const { t, now, actions, lang, fmt } = useApp();
-  const [classes, setClasses] = useState(() => SARAH_CLASSES.filter((c) => !a.classes.includes(c)).slice(0, 1));
-  const [date, setDate] = useState(toYMD(atDay(2, 19, 0, now)));
-  const [time, setTime] = useState(toHM(a.dueAt));
-  const due = fromYMDHM(date, time);
-  const err = !classes.length ? t('b.err.classes') : due <= now ? t('b.err.due') : '';
-  const go = () => { if (err) return; actions.duplicate(a.id, classes, due); onClose(); };
-  return (
-    <Modal open onClose={onClose} title={t('dup.title')} icon={Copy} size="sm"
-      footer={<><button type="button" className="btn btn-secondary" onClick={onClose}>{t('cancel')}</button><button type="button" className="btn btn-primary" disabled={!!err} onClick={go}><Copy aria-hidden="true" className="w-4 h-4" />{t('dup.do')}</button></>}>
-      <p className="text-sm text-ags-slate mb-4" dir="auto">{a.title}</p>
-      <p className="label" id="dup-cls">{t('dup.classes')}</p>
-      <ClassChips value={classes} onChange={setClasses} labelId="dup-cls" />
-      <div className="grid grid-cols-2 gap-3 mt-5">
-        <div><label className="label" htmlFor="dup-d">{t('dup.due')}</label><input id="dup-d" type="date" className="input" value={date} min={toYMD(now)} onChange={(e) => setDate(e.target.value)} /></div>
-        <div><label className="label" htmlFor="dup-t">{t('b.dueTime')}</label><input id="dup-t" type="time" className="input" value={time} onChange={(e) => setTime(e.target.value)} /></div>
-      </div>
-      <p className={cx('mt-3 text-sm', err ? 'text-rose-700' : 'text-ags-slate')} role={err ? 'alert' : undefined}>{err || `${t('a.due')}: ${fmt.date(due)} · ${fmt.time(due)} · ${clsList(classes, lang)}`}</p>
-    </Modal>
-  );
-}
-
-function TeacherAssignments() {
-  const { t, fmt, lang, now, db, navigate, route } = useApp();
-  const [tab, setTab] = useState('open');
-  const [dup, setDup] = useState(null);
-  const [prev, setPrev] = useState(null);
-  const all = teacherAssignments(db);
-  const groups = {
-    open: all.filter((a) => isPublished(a, now) && a.dueAt > now).sort((x, y) => x.dueAt - y.dueAt),
-    scheduled: all.filter((a) => !isPublished(a, now)),
-    past: all.filter((a) => isPublished(a, now) && a.dueAt <= now),
-    all,
-  };
-  const list = groups[tab];
-  return (
-    <div>
-      <PageHeader title={t('ta.title')} subtitle={t('ta.subtitle')}
-        actions={<button type="button" className="btn btn-gold" onClick={() => navigate({ name: 'create' })}><PlusCircle aria-hidden="true" className="w-4 h-4" />{t('td.new')}</button>} />
-      <div className="scroll-x mb-5"><Segmented ariaLabel={t('ta.title')} value={tab} onChange={setTab}
-        options={[['open', 'ta.open'], ['scheduled', 'ta.scheduled'], ['past', 'ta.past'], ['all', 'all.tab.all']].map(([v, k]) => ({ value: v, label: `${t(k)} (${fmt.n(groups[v].length)})` }))} /></div>
-      <div className="space-y-3">
-        {list.map((a) => {
-          const pub = isPublished(a, now);
-          const status = !pub ? 'scheduled' : a.dueAt > now ? 'open' : 'past';
-          return (
-            <article key={a.id} className={cx('card p-4 sm:p-5 relative overflow-hidden', route.highlight === a.id && 'ags-flash')}>
-              <span aria-hidden="true" className="absolute inset-y-0 start-0 w-1.5" style={{ background: SUBJECTS[a.subject]?.color }} />
-              <div className="flex flex-wrap items-start gap-3">
-                <div className="flex-1 min-w-[14rem]">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-bold text-ags-navy text-[1.05rem]" dir="auto">{a.title}</h2>
-                    <StatusChip status={status} size="sm" />
-                  </div>
-                  <p className="text-sm text-ags-slate mt-1 flex flex-wrap gap-x-3">
-                    <span>{pub ? dueLabel(t, fmt, a.dueAt, now) : t('ta.publishes', { when: `${fmt.date(a.publishAt)} · ${fmt.time(a.publishAt)}` })}</span>
-                    <span>· {t(`type.${submissionType(a)}`)}</span><span>· {t('pts', { n: a.points })}</span>
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPrev(a)}><Eye aria-hidden="true" className="w-4 h-4" />{t('ta.preview')}</button>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDup(a)}><Copy aria-hidden="true" className="w-4 h-4" />{t('ta.duplicate')}</button>
-                </div>
-              </div>
-              <div className="mt-3 grid sm:grid-cols-3 gap-2">
-                {a.classes.map((c) => {
-                  const s = classStats(db, a, c, now);
-                  return (
-                    <button key={c} type="button" disabled={!pub} onClick={() => navigate({ name: 'submissions', id: a.id, cls: c })}
-                      className="text-start rounded-xl ring-1 ring-slate-200 hover:ring-ags-indigo p-3 transition disabled:opacity-70 disabled:hover:ring-slate-200">
-                      <span className="flex items-center justify-between text-sm"><span className="font-bold text-ags-navy">{clsLabel(c, lang, true)}</span>
-                        {s.toGrade > 0 && <span className="text-xs font-bold bg-ags-gold text-ags-navy rounded-full px-2 py-0.5">{t('ta.toGrade', { n: s.toGrade })}</span>}</span>
-                      <span className="mt-2 flex items-center gap-2"><ProgressBar value={s.handedIn} max={s.total} className="flex-1" label={t('td.handedIn', { n: s.handedIn, total: s.total })} /><span className="text-xs tabular text-ags-slate">{t('td.handedIn', { n: s.handedIn, total: s.total })}</span></span>
-                    </button>
-                  );
-                })}
-              </div>
-            </article>
-          );
-        })}
-        {!list.length && <div className="card"><EmptyState title={t('empty.filter')} /></div>}
-      </div>
-      {dup && <DuplicateModal a={dup} onClose={() => setDup(null)} />}
-      <Modal open={!!prev} onClose={() => setPrev(null)} title={t('ta.preview')} icon={Eye} size="lg" footer={<button type="button" className="btn btn-primary" onClick={() => setPrev(null)}>{t('close')}</button>}>
-        {prev && <StudentPreview a={prev} />}
-      </Modal>
-    </div>
-  );
-}
-
-/* ---------- assignment builder ---------- */
-
-const BLOCK_TYPES = [
-  ['mcq', CircleDot], ['checkbox', CheckSquare], ['short', Type], ['long', AlignLeft],
-  ['tf', ToggleLeft], ['match', Shuffle], ['file', Paperclip], ['paper', Camera],
-];
-const BLOCK_ICON = Object.fromEntries(BLOCK_TYPES);
-
-function newBlock(type, prompt = '') {
-  const base = { id: uid('b'), type, prompt, points: 2, required: true };
-  if (type === 'mcq') return { ...base, options: ['', '', ''], correct: 0 };
-  if (type === 'checkbox') return { ...base, options: ['', '', ''], correct: [] };
-  if (type === 'tf') return { ...base, correct: true, points: 1 };
-  if (type === 'match') return { ...base, pairs: [{ left: '', right: '' }, { left: '', right: '' }, { left: '', right: '' }], points: 3 };
-  if (type === 'long') return { ...base, points: 5 };
-  if (type === 'file') return { ...base, points: 5 };
-  if (type === 'paper') return { ...base, points: 10 };
-  return base;
-}
-
-function newDraft(now) {
-  return {
-    title: '', instructions: '', subject: 'math', classes: ['8B'], blocks: [], attachments: [],
-    rubric: [{ id: 'method', key: 'method' }, { id: 'accuracy', key: 'accuracy' }, { id: 'presentation', key: 'presentation' }],
-    publishMode: 'now', publishDate: toYMD(now), publishTime: '07:00',
-    dueDate: toYMD(atDay(1, 19, 0, now)), dueTime: '19:00',
-    lateMode: 'accept', untilDate: toYMD(atDay(3, 19, 0, now)), untilTime: '19:00', deduct: false, pct: 10,
-    allowResubmit: false, template: null, view: 'edit',
-  };
-}
-
-const TEMPLATES = {
-  worksheet: { icon: Camera, build: (lang) => ({
-    instructions: lang === 'ar' ? 'أكمل ورقة العمل في دفترك مع إظهار جميع خطوات الحل، ثم التقط صورة واضحة لكل صفحة.' : 'Complete the worksheet in your exercise book. Show all your working, then take a clear photo of each page.',
-    blocks: [newBlock('paper', lang === 'ar' ? 'التقط صورة واضحة لكل صفحة من حلّك.' : 'Take a clear photo of each page of your working.')],
-    attachments: [{ id: uid('att'), kind: 'worksheet', name: lang === 'ar' ? 'ورقة العمل.pdf' : 'Worksheet.pdf' }],
-    rubric: ['method', 'accuracy', 'presentation'].map((k) => ({ id: k, key: k })),
-  }) },
-  quiz: { icon: ListChecks, build: () => ({
-    instructions: 'Answer every question. This quiz is marked automatically.',
-    blocks: [
-      { ...newBlock('mcq', 'Which fraction is equivalent to 3/4?'), options: ['6/8', '3/8', '4/3', '9/16'], correct: 0 },
-      { ...newBlock('mcq', 'What is 2/5 + 1/5?'), options: ['3/10', '3/5', '2/25', '1/5'], correct: 1 },
-      { ...newBlock('mcq', 'Simplify 12/18.'), options: ['2/3', '3/4', '6/9', '4/6'], correct: 0 },
-      { ...newBlock('tf', '0.25 is equal to 1/4.'), correct: true, points: 2 },
-      { ...newBlock('tf', '5/6 is smaller than 2/3.'), correct: false, points: 2 },
-    ],
-    attachments: [], rubric: [],
-  }) },
-  reading: { icon: BookOpen, build: () => ({
-    instructions: 'Read the attached text carefully, then answer the questions using evidence from the text.',
-    blocks: [
-      { ...newBlock('short', 'What is the main idea of the text?'), points: 3 },
-      { ...newBlock('short', 'Find one quotation that shows how the main character feels.'), points: 3 },
-      { ...newBlock('long', 'Explain how the writer creates tension. Use evidence from the text.'), points: 6 },
-    ],
-    attachments: [{ id: uid('att'), kind: 'worksheet', name: 'Reading text.pdf' }],
-    rubric: ['understanding', 'evidence', 'language'].map((k) => ({ id: k, key: k })),
-  }) },
-  project: { icon: Sparkles, build: (lang, now) => ({
-    instructions: 'Work on your project over the next week. Upload your final file and a short reflection.',
-    blocks: [{ ...newBlock('file', 'Upload your project file (PDF, slides or images).'), points: 15 }, { ...newBlock('long', 'Reflection: what did you learn, and what would you improve next time?'), points: 5 }],
-    attachments: [], rubric: ['research', 'creativity', 'presentation'].map((k) => ({ id: k, key: k })),
-    dueDate: toYMD(atDay(7, 19, 0, now)), allowResubmit: true,
-  }) },
-};
-
-/** Turn the builder draft into an assignment object (also used for the preview). */
-function draftToAssignment(d, now, id = 'preview') {
-  const publishAt = d.publishMode === 'schedule' ? fromYMDHM(d.publishDate, d.publishTime) : now;
-  const teacherPts = sum(d.blocks.filter((b) => !isAuto(b)).map((b) => Number(b.points) || 0));
-  return {
-    id, title: d.title.trim() || '—', instructions: d.instructions.trim(), subject: d.subject, teacherId: DEMO_TEACHER, classes: d.classes.length ? d.classes : ['8B'],
-    lang: /[؀-ۿ]/.test(d.title + d.instructions) ? 'ar' : 'en',
-    blocks: d.blocks.map((b) => ({ ...b, points: Number(b.points) || 0, options: b.options?.map((o, i) => o.trim() || `${i + 1}`), pairs: b.pairs?.filter((p) => p.left.trim() || p.right.trim()) })),
-    attachments: d.attachments, publishAt, dueAt: fromYMDHM(d.dueDate, d.dueTime),
-    status: publishAt > now ? 'scheduled' : 'published',
-    latePolicy: { mode: d.lateMode, until: d.lateMode === 'until' ? fromYMDHM(d.untilDate, d.untilTime) : null, deduct: d.deduct && d.lateMode !== 'none', pct: Number(d.pct) || 0 },
-    allowResubmit: d.allowResubmit,
-    points: sum(d.blocks.map((b) => Number(b.points) || 0)),
-    rubric: teacherPts > 0 ? distributeRubric(d.rubric.length ? d.rubric : [{ id: 'overall', key: 'content' }], teacherPts) : [],
-    createdAt: now,
-  };
-}
-
-function validateDraft(d, now, t) {
-  const e = {};
-  if (!d.title.trim()) e.title = t('b.err.title');
-  if (!d.classes.length) e.classes = t('b.err.classes');
-  if (!d.blocks.length) e.blocks = t('b.err.blocks');
-  const due = fromYMDHM(d.dueDate, d.dueTime);
-  const pub = d.publishMode === 'schedule' ? fromYMDHM(d.publishDate, d.publishTime) : now;
-  if (!(due > now) || due <= pub) e.due = t('b.err.due');
-  if (d.publishMode === 'schedule' && pub <= now) e.publish = t('b.err.publish');
-  const badBlocks = d.blocks.filter((b) => !b.prompt.trim() || (['mcq', 'checkbox'].includes(b.type) && b.options.filter((o) => o.trim()).length < 2) || (b.type === 'checkbox' && !b.correct.length) || (b.type === 'match' && b.pairs.filter((p) => p.left.trim() && p.right.trim()).length < 2));
-  if (badBlocks.length) { e.prompts = t('b.err.prompt'); e.badIds = badBlocks.map((b) => b.id); }
-  return e;
-}
-
-function BlockEditor({ b, i, n, update, move, duplicate, remove, bad }) {
-  const { t } = useApp();
-  const I = BLOCK_ICON[b.type];
-  const set = (patch) => update({ ...b, ...patch });
-  const pid = `bp_${b.id}`;
-  return (
-    <div className={cx('card p-4 sm:p-5', bad && 'ring-2 ring-rose-300')}>
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <span className="w-8 h-8 rounded-lg bg-ags-indigo-50 text-ags-indigo inline-flex items-center justify-center"><I aria-hidden="true" className="w-4 h-4" /></span>
-        <span className="font-bold text-sm text-ags-navy">{t('q.number', { n: i + 1 })} · {t(`q.${b.type}`)}</span>
-        <span className={cx('text-xs rounded-full px-2 py-0.5 ring-1', isAuto(b) ? 'bg-emerald-50 text-emerald-800 ring-emerald-200' : 'bg-slate-100 text-slate-700 ring-slate-200')}>{isAuto(b) ? t('b.autoMarked') : t('b.teacherMarked')}</span>
-        <div className="ms-auto flex gap-0.5">
-          <button type="button" className="btn btn-ghost btn-icon" disabled={i === 0} onClick={() => move(-1)} aria-label={`${t('b.moveUp')} — ${t('q.number', { n: i + 1 })}`}><ChevronUp aria-hidden="true" className="w-4 h-4" /></button>
-          <button type="button" className="btn btn-ghost btn-icon" disabled={i === n - 1} onClick={() => move(1)} aria-label={`${t('b.moveDown')} — ${t('q.number', { n: i + 1 })}`}><ChevronDown aria-hidden="true" className="w-4 h-4" /></button>
-          <button type="button" className="btn btn-ghost btn-icon" onClick={duplicate} aria-label={`${t('b.duplicate')} — ${t('q.number', { n: i + 1 })}`}><Copy aria-hidden="true" className="w-4 h-4" /></button>
-          <button type="button" className="btn btn-ghost btn-icon text-rose-700" onClick={remove} aria-label={`${t('b.delete')} — ${t('q.number', { n: i + 1 })}`}><Trash2 aria-hidden="true" className="w-4 h-4" /></button>
+    <div className="max-w-4xl mx-auto">
+      <TeacherTabs />
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-7">
+        <div>
+          <h1 className="text-3xl font-bold text-ags-navy">{t(hour < 12 ? 'greet.morning' : hour < 17 ? 'greet.afternoon' : 'greet.evening', { name: teacherShort('sarah', lang) })}</h1>
+          <p className="text-ags-slate mt-1">{subjName('math', lang)} · <bdi>{clsList(SARAH_CLASSES, lang)}</bdi></p>
         </div>
+        <button type="button" className="btn btn-gold btn-lg" onClick={() => navigate({ name: 'create' })}><Plus aria-hidden="true" className="w-5 h-5" />{t('th.set')}</button>
       </div>
-      <label htmlFor={pid} className="sr-only">{t('b.prompt')}</label>
-      <textarea id={pid} rows={2} dir="auto" className={cx('input font-medium', bad && !b.prompt.trim() && 'input-error')} value={b.prompt} placeholder={t('b.promptPh')} onChange={(e) => set({ prompt: e.target.value })} />
 
-      {(b.type === 'mcq' || b.type === 'checkbox') && (
-        <div className="mt-3 space-y-2">
-          <p className="hint">{b.type === 'mcq' ? t('b.correctOne') : t('b.correctMany')}</p>
-          {b.options.map((o, oi) => {
-            const isC = b.type === 'mcq' ? b.correct === oi : b.correct.includes(oi);
+      <section className="card p-5 sm:p-6 mb-5" aria-labelledby="tm-h">
+        <h2 id="tm-h" className="sr-only">{t('th.toMark')}</h2>
+        <H2 icon={Inbox} count={sum(toMark.map((r) => r.s.toGrade))}>{t('th.toMark')}</H2>
+        {toMark.length ? (
+          <ul className="divide-y divide-slate-100">
+            {toMark.map((r) => (
+              <li key={r.a.id + r.cls} className="py-3 flex flex-wrap items-center gap-3">
+                <span className="flex-1 min-w-[12rem]">
+                  <span className="block font-bold text-ags-navy"><bdi>{r.a.title}</bdi></span>
+                  <span className="block text-sm text-ags-slate"><bdi>{clsLabel(r.cls, lang)}</bdi> · {t('th.handedIn', { n: r.s.handedIn, total: r.s.total })}</span>
+                </span>
+                <span className="text-sm font-bold bg-ags-gold text-ags-navy rounded-full px-3 py-1">{t('th.nToMark', { n: r.s.toGrade })}</span>
+                <button type="button" className="btn btn-primary" onClick={() => startMarking(r)}><PenLine aria-hidden="true" className="w-4 h-4" />{t('th.startMarking')}</button>
+              </li>
+            ))}
+          </ul>
+        ) : <EmptyState icon={CheckCircle2} title={t('th.allMarked')} />}
+      </section>
+
+      <section className="card p-5 sm:p-6 mb-5" aria-labelledby="yh-h">
+        <h2 id="yh-h" className="sr-only">{t('th.yours')}</h2>
+        <H2 icon={ClipboardList}>{t('th.yours')}</H2>
+        <ul className="divide-y divide-slate-100">
+          {recent.map((r) => {
+            const notIn = r.s.missing + r.s.notYet;
             return (
-              <div key={oi} className="flex items-center gap-2">
-                <input type={b.type === 'mcq' ? 'radio' : 'checkbox'} name={`c_${b.id}`} checked={isC} aria-label={`${t('b.markCorrect')} — ${t('b.option', { n: oi + 1 })}`}
-                  onChange={() => set({ correct: b.type === 'mcq' ? oi : (isC ? b.correct.filter((x) => x !== oi) : [...b.correct, oi]) })} />
-                <input className={cx('input !min-h-[2.4rem]', isC && 'ring-1 ring-emerald-300 border-emerald-400')} dir="auto" value={o} placeholder={t('b.option', { n: oi + 1 })} aria-label={t('b.option', { n: oi + 1 })}
-                  onChange={(e) => set({ options: b.options.map((x, j) => (j === oi ? e.target.value : x)) })} />
-                <button type="button" className="btn btn-ghost btn-icon" disabled={b.options.length <= 2} aria-label={`${t('b.removeOption')} ${oi + 1}`}
-                  onClick={() => { const opts = b.options.filter((_, j) => j !== oi); set({ options: opts, correct: b.type === 'mcq' ? (b.correct === oi ? 0 : b.correct > oi ? b.correct - 1 : b.correct) : b.correct.filter((x) => x !== oi).map((x) => (x > oi ? x - 1 : x)) }); }}><X aria-hidden="true" className="w-4 h-4" /></button>
-              </div>
+              <li key={r.a.id + r.cls} className="py-3.5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <span className="flex-1 min-w-[12rem]">
+                    <span className="block font-bold text-ags-navy"><bdi>{r.a.title}</bdi></span>
+                    <span className="block text-sm text-ags-slate"><bdi>{clsLabel(r.cls, lang)}</bdi> · {r.a.dueAt > now ? dueLabel(t, fmt, r.a.dueAt, now) : t('card.wasDue', { day: fmt.date(r.a.dueAt) })}</span>
+                  </span>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate({ name: 'class', id: r.a.id, cls: r.cls })}><Users aria-hidden="true" className="w-4 h-4" />{t('th.seeClass')}</button>
+                  {notIn > 0 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => actions.remind(r.a.id, r.cls)}><Bell aria-hidden="true" className="w-4 h-4" />{t('th.remind', { n: notIn })}</button>}
+                </div>
+                <div className="mt-2 flex items-center gap-3">
+                  <ProgressBar value={r.s.handedIn} max={r.s.total} className="flex-1 max-w-sm" label={t('th.handedIn', { n: r.s.handedIn, total: r.s.total })} />
+                  <span className="text-xs text-ags-slate tabular">{t('th.handedIn', { n: r.s.handedIn, total: r.s.total })}</span>
+                </div>
+              </li>
             );
           })}
-          {b.options.length < 6 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => set({ options: [...b.options, ''] })}><Plus aria-hidden="true" className="w-4 h-4" />{t('b.addOption')}</button>}
-        </div>
-      )}
-      {b.type === 'tf' && (
-        <div className="mt-3"><p className="hint mb-1.5">{t('b.correct')}</p>
-          <Segmented ariaLabel={t('b.correct')} value={b.correct ? 't' : 'f'} onChange={(v) => set({ correct: v === 't' })} options={[{ value: 't', label: t('q.true') }, { value: 'f', label: t('q.false') }]} /></div>
-      )}
-      {b.type === 'match' && (
-        <div className="mt-3 space-y-2">
-          <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-2 text-xs text-ags-slate"><span>{t('b.pairLeft')}</span><span /><span>{t('b.pairRight')}</span><span /></div>
-          {b.pairs.map((p, pi) => (
-            <div key={pi} className="grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center">
-              <input className="input !min-h-[2.4rem]" dir="auto" value={p.left} aria-label={`${t('b.pairLeft')} ${pi + 1}`} onChange={(e) => set({ pairs: b.pairs.map((x, j) => (j === pi ? { ...x, left: e.target.value } : x)) })} />
-              <ArrowRight aria-hidden="true" className="w-4 h-4 text-slate-400 flip-rtl" />
-              <input className="input !min-h-[2.4rem]" dir="auto" value={p.right} aria-label={`${t('b.pairRight')} ${pi + 1}`} onChange={(e) => set({ pairs: b.pairs.map((x, j) => (j === pi ? { ...x, right: e.target.value } : x)) })} />
-              <button type="button" className="btn btn-ghost btn-icon" disabled={b.pairs.length <= 2} aria-label={`${t('b.removePair')} ${pi + 1}`} onClick={() => set({ pairs: b.pairs.filter((_, j) => j !== pi) })}><X aria-hidden="true" className="w-4 h-4" /></button>
-            </div>
+          {scheduled.map((a) => (
+            <li key={a.id} className="py-3.5 flex flex-wrap items-center gap-3">
+              <span className="flex-1 min-w-[12rem]"><span className="block font-bold text-ags-navy"><bdi>{a.title}</bdi></span><span className="block text-sm text-ags-slate"><bdi>{clsList(a.classes, lang)}</bdi> · {t('th.sendsOn', { when: `${fmt.date(a.publishAt)}, ${fmt.time(a.publishAt)}` })}</span></span>
+              <StatusChip status="scheduled" size="sm" />
+            </li>
           ))}
-          {b.pairs.length < 8 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => set({ pairs: [...b.pairs, { left: '', right: '' }] })}><Plus aria-hidden="true" className="w-4 h-4" />{t('b.addPair')}</button>}
-        </div>
-      )}
-      {(b.type === 'short' || b.type === 'long') && <div className={cx('mt-3 rounded-xl bg-slate-50 ring-1 ring-slate-200 text-sm text-ags-slate px-3 py-2', b.type === 'long' && 'h-20')}>{t('b.studentAnswers')}</div>}
-      {b.type === 'file' && <p className="mt-3 text-sm text-ags-slate flex gap-2"><Paperclip aria-hidden="true" className="w-4 h-4 mt-0.5" />{t('b.fileInfo')}</p>}
-      {b.type === 'paper' && <p className="mt-3 text-sm text-ags-slate flex gap-2 rounded-xl bg-ags-gold-50 p-3"><Camera aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0" />{t('b.paperInfo')}</p>}
+        </ul>
+      </section>
 
-      <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-4">
-        <label className="flex items-center gap-2 text-sm"><span>{t('b.pts')}</span>
-          <input type="number" min={0} max={100} className="input !w-20 !min-h-[2.3rem] tabular" value={b.points} onChange={(e) => set({ points: clamp(Number(e.target.value) || 0, 0, 100) })} /></label>
-        <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={b.required} onChange={(e) => set({ required: e.target.checked })} />{t('b.required')}</label>
-      </div>
-    </div>
-  );
-}
-
-function AssignmentBuilder() {
-  const { t, fmt, lang, now, builder: d, setBuilder, actions, navigate, toast } = useApp();
-  const [errors, setErrors] = useState({});
-  const [adding, setAdding] = useState(false);
-  const [linkUrl, setLinkUrl] = useState('');
-  const [custom, setCustom] = useState('');
-  const imgRef = useRef(null);
-  const set = (patch) => setBuilder((x) => ({ ...x, ...patch }));
-  const setBlocks = (fn) => setBuilder((x) => ({ ...x, blocks: fn(x.blocks) }));
-  const preview = useMemo(() => draftToAssignment(d, now), [d, now]);
-  const teacherPts = teacherPoints(preview);
-  const autoPts = preview.points - teacherPts;
-
-  const applyTemplate = (k) => {
-    const tp = TEMPLATES[k].build(lang, now);
-    setBuilder((x) => ({ ...x, ...tp, title: x.title, template: k }));
-    setErrors({});
-    toast(t('tpl.applied'), { kind: 'success' });
-    setTimeout(() => document.getElementById('b-title')?.focus(), 50);
-  };
-  const addBlock = (type) => { setBlocks((bs) => [...bs, newBlock(type)]); setAdding(false); setTimeout(() => { const el = document.querySelectorAll('[id^="bp_"]'); el[el.length - 1]?.focus(); }, 60); };
-  const publish = () => {
-    const e = validateDraft(d, now, t); setErrors(e);
-    if (Object.keys(e).length) { toast(t('b.err.fix'), { kind: 'warn' }); document.getElementById('b-errors')?.focus(); return; }
-    const a = actions.publish(d);
-    setBuilder(newDraft(now)); setErrors({});
-    navigate({ name: 'assignments', highlight: a.id });
-  };
-  const toggleCrit = (k) => set({ rubric: d.rubric.some((c) => c.key === k) ? d.rubric.filter((c) => c.key !== k) : [...d.rubric, { id: k, key: k }] });
-  const rubricSplit = teacherPts > 0 ? distributeRubric(d.rubric.length ? d.rubric : [{ id: 'overall', key: 'content' }], teacherPts) : [];
-  const errList = ['title', 'classes', 'blocks', 'prompts', 'due', 'publish'].filter((k) => errors[k]);
-
-  return (
-    <div>
-      <PageHeader title={t('b.title')} subtitle={t('b.subtitle')}
-        actions={<>
-          <Segmented ariaLabel={t('b.preview')} value={d.view} onChange={(v) => set({ view: v })} options={[{ value: 'edit', label: t('b.editMode'), icon: PencilLine }, { value: 'preview', label: t('b.preview'), icon: Eye }]} />
-          <button type="button" className="btn btn-gold" onClick={publish}><Send aria-hidden="true" className="w-4 h-4 flip-rtl" />{d.publishMode === 'schedule' ? t('b.scheduleBtn') : t('b.publishBtn')}</button>
-        </>} />
-
-      {errList.length > 0 && (
-        <div id="b-errors" tabIndex={-1} role="alert" className="mb-5 rounded-xl bg-rose-50 ring-1 ring-rose-200 p-4 text-rose-900">
-          <p className="font-bold flex items-center gap-2"><AlertCircle aria-hidden="true" className="w-4 h-4" />{t('b.err.fix')}</p>
-          <ul className="mt-1 text-sm list-disc ps-6">{errList.map((k) => <li key={k}>{errors[k]}</li>)}</ul>
-        </div>
-      )}
-
-      {d.view === 'preview' ? (
-        <div className="max-w-4xl mx-auto"><StudentPreview a={preview} /></div>
-      ) : (
-        <>
-          <section aria-labelledby="tpl-h" className="mb-6">
-            <h2 id="tpl-h" className="text-sm font-bold text-ags-navy mb-2">{t('b.templates')}</h2>
-            <div className="scroll-x -mx-1 px-1"><div className="grid grid-flow-col auto-cols-[15rem] lg:grid-flow-row lg:grid-cols-4 lg:auto-cols-auto gap-3 pb-1">
-              {Object.entries(TEMPLATES).map(([k, tp]) => {
-                const I = tp.icon; const on = d.template === k;
-                return (
-                  <button key={k} type="button" onClick={() => applyTemplate(k)} aria-pressed={on}
-                    className={cx('card text-start p-4 flex gap-3 items-start transition hover:shadow-md', on && 'ring-2 ring-ags-gold')}>
-                    <span className={cx('w-10 h-10 rounded-xl inline-flex items-center justify-center shrink-0', on ? 'bg-ags-gold text-ags-navy' : 'bg-ags-indigo-50 text-ags-indigo')}><I aria-hidden="true" className="w-5 h-5" /></span>
-                    <span><span className="block font-bold text-ags-navy text-sm">{t(`tpl.${k}`)}</span><span className="block text-xs text-ags-slate mt-0.5 leading-snug">{t(`tpl.${k}.d`)}</span></span>
-                  </button>
-                );
-              })}
-            </div></div>
-          </section>
-
-          <div className="grid lg:grid-cols-[minmax(0,1fr)_21rem] gap-5 items-start">
-            <div className="space-y-5 min-w-0">
-              <section className="card p-5 sm:p-6 space-y-4" aria-labelledby="det-h">
-                <h2 id="det-h" className="font-bold text-ags-navy">{t('b.details')}</h2>
-                <div>
-                  <label className="label" htmlFor="b-title">{t('b.fTitle')}</label>
-                  <input id="b-title" className={cx('input text-lg font-medium', errors.title && 'input-error')} dir="auto" value={d.title} placeholder={t('b.fTitlePh')} onChange={(e) => set({ title: e.target.value })} aria-invalid={!!errors.title} />
-                </div>
-                <div>
-                  <label className="label" htmlFor="b-instr">{t('b.fInstr')}</label>
-                  <textarea id="b-instr" className="input min-h-[6rem]" dir="auto" value={d.instructions} placeholder={t('b.fInstrPh')} onChange={(e) => set({ instructions: e.target.value })} />
-                </div>
-                <div className="grid sm:grid-cols-[14rem_1fr] gap-4">
-                  <div>
-                    <label className="label" htmlFor="b-subj">{t('b.subject')}</label>
-                    <select id="b-subj" className="input" value={d.subject} onChange={(e) => set({ subject: e.target.value })}>
-                      {CORE_SUBJECTS.map((s) => <option key={s} value={s}>{subjName(s, lang)}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <p className="label" id="b-cls">{t('b.classes')}</p>
-                    <ClassChips value={d.classes} onChange={(v) => set({ classes: v })} error={errors.classes} labelId="b-cls" />
-                  </div>
-                </div>
-              </section>
-
-              <section aria-labelledby="q-h">
-                <SectionTitle id="q-h" icon={ListChecks} title={t('b.questions')} count={d.blocks.length} right={<span className="text-sm text-ags-slate tabular">{t('b.total')}: <b className="text-ags-navy">{t('pts', { n: preview.points })}</b></span>} />
-                <div className="space-y-3">
-                  {d.blocks.map((b, i) => (
-                    <BlockEditor key={b.id} b={b} i={i} n={d.blocks.length} bad={errors.badIds?.includes(b.id)}
-                      update={(nb) => setBlocks((bs) => bs.map((x) => (x.id === b.id ? nb : x)))}
-                      move={(dlt) => setBlocks((bs) => { const j = i + dlt; if (j < 0 || j >= bs.length) return bs; const c = [...bs]; [c[i], c[j]] = [c[j], c[i]]; return c; })}
-                      duplicate={() => setBlocks((bs) => { const c = [...bs]; c.splice(i + 1, 0, { ...JSON.parse(JSON.stringify(b)), id: uid('b') }); return c; })}
-                      remove={() => setBlocks((bs) => bs.filter((x) => x.id !== b.id))} />
-                  ))}
-                  {!d.blocks.length && <div className={cx('card', errors.blocks && 'ring-2 ring-rose-300')}><EmptyState icon={ListChecks} title={t('b.empty')} /></div>}
-                </div>
-                <div className="mt-3">
-                  <button type="button" className="btn btn-secondary" aria-expanded={adding} onClick={() => setAdding((v) => !v)}><Plus aria-hidden="true" className="w-4 h-4" />{t('b.addQ')}</button>
-                  {adding && (
-                    <div className="mt-3 card p-3 grid grid-cols-2 sm:grid-cols-4 gap-2 ags-fade-up" role="menu" aria-label={t('b.addQ')}>
-                      {BLOCK_TYPES.map(([type, I]) => (
-                        <button key={type} type="button" role="menuitem" onClick={() => addBlock(type)} className="flex flex-col items-center gap-1.5 rounded-xl p-3 ring-1 ring-slate-200 hover:ring-ags-indigo hover:bg-ags-indigo-50 text-sm text-ags-navy text-center">
-                          <I aria-hidden="true" className="w-5 h-5 text-ags-indigo" />{t(`q.${type}`)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              <section className="card p-5 sm:p-6" aria-labelledby="att-b-h">
-                <h2 id="att-b-h" className="font-bold text-ags-navy mb-3 flex items-center gap-2"><Paperclip aria-hidden="true" className="w-4 h-4" />{t('a.attachments')}</h2>
-                {d.attachments.length > 0 && (
-                  <ul className="space-y-2 mb-3">
-                    {d.attachments.map((x) => (
-                      <li key={x.id} className="flex items-center gap-3 rounded-xl ring-1 ring-slate-200 p-2.5">
-                        <span className="w-9 h-9 rounded-lg bg-ags-indigo-50 text-ags-indigo inline-flex items-center justify-center overflow-hidden">{x.kind === 'image' && x.src ? <img src={x.src} alt="" className="w-full h-full object-cover" /> : x.kind === 'link' ? <Link2 aria-hidden="true" className="w-4 h-4" /> : <FileText aria-hidden="true" className="w-4 h-4" />}</span>
-                        <span className="flex-1 min-w-0 text-sm truncate" dir="auto">{x.name}</span>
-                        <button type="button" className="btn btn-ghost btn-icon" aria-label={`${t('b.delete')} — ${x.name}`} onClick={() => set({ attachments: d.attachments.filter((y) => y.id !== x.id) })}><Trash2 aria-hidden="true" className="w-4 h-4" /></button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => { set({ attachments: [...d.attachments, { id: uid('att'), kind: 'worksheet', name: `${d.title.trim() || t('b.att.worksheetName')}.pdf` }] }); toast(t('b.att.mock'), { kind: 'info' }); }}><FileText aria-hidden="true" className="w-4 h-4" />{t('b.att.worksheet')}</button>
-                  <label className="btn btn-secondary btn-sm cursor-pointer"><ImageIcon aria-hidden="true" className="w-4 h-4" />{t('b.att.image')}
-                    <input ref={imgRef} type="file" accept="image/*" className="sr-only" onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; const meta = await readFileMeta(f); set({ attachments: [...d.attachments, { id: uid('att'), kind: 'image', name: f.name, src: meta.src }] }); }} />
-                  </label>
-                </div>
-                <form className="mt-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); const u = linkUrl.trim(); if (!u) return; const url = /^https?:\/\//i.test(u) ? u : `https://${u}`; set({ attachments: [...d.attachments, { id: uid('att'), kind: 'link', name: u, url }] }); setLinkUrl(''); }}>
-                  <label htmlFor="b-link" className="sr-only">{t('b.att.link')}</label>
-                  <input id="b-link" className="input !min-h-[2.4rem]" dir="ltr" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder={t('b.att.linkPh')} />
-                  <button type="submit" className="btn btn-secondary btn-sm whitespace-nowrap"><Link2 aria-hidden="true" className="w-4 h-4" />{t('b.att.link')}</button>
-                </form>
-              </section>
-
-              <section className="card p-5 sm:p-6" aria-labelledby="rub-h">
-                <h2 id="rub-h" className="font-bold text-ags-navy mb-1 flex items-center gap-2"><ClipboardList aria-hidden="true" className="w-4 h-4" />{t('b.rubric')}</h2>
-                {teacherPts > 0 ? (
-                  <>
-                    <p className="hint mb-3">{t('b.rubric.hint', { n: teacherPts })}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {RUBRIC_PRESETS.map((k) => {
-                        const on = d.rubric.some((c) => c.key === k);
-                        return <button key={k} type="button" aria-pressed={on} onClick={() => toggleCrit(k)} className={cx('rounded-full px-3 py-1.5 text-sm ring-1 min-h-[2.25rem]', on ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white ring-slate-300 hover:ring-ags-indigo')}>{t(`rub.${k}`)}</button>;
-                      })}
-                      {d.rubric.filter((c) => !c.key).map((c) => (
-                        <button key={c.id} type="button" aria-pressed="true" onClick={() => set({ rubric: d.rubric.filter((x) => x.id !== c.id) })} className="rounded-full px-3 py-1.5 text-sm ring-1 bg-ags-indigo text-white ring-ags-indigo inline-flex items-center gap-1.5" dir="auto">{c.label}<X aria-hidden="true" className="w-3.5 h-3.5" /></button>
-                      ))}
-                    </div>
-                    <form className="mt-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); if (!custom.trim()) return; set({ rubric: [...d.rubric, { id: uid('rc'), label: custom.trim() }] }); setCustom(''); }}>
-                      <label htmlFor="b-crit" className="sr-only">{t('rub.customPh')}</label>
-                      <input id="b-crit" className="input !min-h-[2.4rem]" dir="auto" value={custom} onChange={(e) => setCustom(e.target.value)} placeholder={t('rub.customPh')} />
-                      <button type="submit" className="btn btn-secondary btn-sm"><Plus aria-hidden="true" className="w-4 h-4" />{t('b.rubric.add')}</button>
-                    </form>
-                    <ul className="mt-4 grid sm:grid-cols-3 gap-2">
-                      {rubricSplit.map((c) => <li key={c.id} className="rounded-xl bg-slate-50 ring-1 ring-slate-200 px-3 py-2 text-sm flex justify-between gap-2"><span className="truncate">{c.key ? t(`rub.${c.key}`) : c.label}</span><b className="tabular">{fmt.n(c.max)}</b></li>)}
-                    </ul>
-                  </>
-                ) : <p className="hint">{d.blocks.length ? t('b.rubric.none') : t('b.rubric.empty')}</p>}
-              </section>
-            </div>
-
-            <aside className="card p-5 space-y-5 lg:sticky lg:top-20" aria-labelledby="set-h">
-              <h2 id="set-h" className="font-bold text-ags-navy flex items-center gap-2"><Settings aria-hidden="true" className="w-4 h-4" />{t('b.settings')}</h2>
-              <div>
-                <p className="label">{t('b.publish')}</p>
-                <Segmented full ariaLabel={t('b.publish')} value={d.publishMode} onChange={(v) => set({ publishMode: v })} options={[{ value: 'now', label: t('b.pubNow') }, { value: 'schedule', label: t('b.pubSchedule') }]} />
-                {d.publishMode === 'schedule' && (
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <input type="date" className={cx('input', errors.publish && 'input-error')} aria-label={t('b.pubAt')} value={d.publishDate} min={toYMD(now)} onChange={(e) => set({ publishDate: e.target.value })} />
-                    <input type="time" className="input" aria-label={t('b.pubAt')} value={d.publishTime} onChange={(e) => set({ publishTime: e.target.value })} />
-                  </div>
-                )}
-              </div>
-              <div>
-                <p className="label">{t('b.due')}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <input type="date" className={cx('input', errors.due && 'input-error')} aria-label={t('b.dueDate')} value={d.dueDate} min={toYMD(now)} onChange={(e) => set({ dueDate: e.target.value })} />
-                  <input type="time" className={cx('input', errors.due && 'input-error')} aria-label={t('b.dueTime')} value={d.dueTime} onChange={(e) => set({ dueTime: e.target.value })} />
-                </div>
-                <p className="hint mt-1.5">{fmt.date(preview.dueAt)} · {fmt.time(preview.dueAt)} · {fmt.hijri(preview.dueAt)}</p>
-              </div>
-              <fieldset>
-                <legend className="label">{t('b.late')}</legend>
-                <div className="space-y-1.5">
-                  {[['accept', 'b.late.accept'], ['until', 'b.late.until'], ['none', 'b.late.none']].map(([v, k]) => (
-                    <label key={v} className={cx('flex items-center gap-2.5 rounded-xl ring-1 px-3 py-2 cursor-pointer text-sm', d.lateMode === v ? 'ring-ags-indigo bg-ags-indigo-50' : 'ring-slate-200')}>
-                      <input type="radio" name="late" checked={d.lateMode === v} onChange={() => set({ lateMode: v })} />
-                      <span className="flex-1">{t(k)}</span>{v === 'accept' && <span className="text-xs text-ags-slate">{t('b.late.default')}</span>}
-                    </label>
-                  ))}
-                </div>
-                {d.lateMode === 'until' && (
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <input type="date" className="input" aria-label={t('b.late.untilDate')} value={d.untilDate} min={d.dueDate} onChange={(e) => set({ untilDate: e.target.value })} />
-                    <input type="time" className="input" aria-label={t('b.late.untilDate')} value={d.untilTime} onChange={(e) => set({ untilTime: e.target.value })} />
-                  </div>
-                )}
-              </fieldset>
-              {d.lateMode !== 'none' && (
-                <div>
-                  <Switch checked={d.deduct} onChange={(v) => set({ deduct: v })} label={t('b.deduct')} hint={t('b.deduct.hint')} />
-                  {d.deduct && <label className="mt-2 flex items-center gap-2 text-sm"><input type="number" min={1} max={50} className="input !w-20 !min-h-[2.3rem] tabular" value={d.pct} onChange={(e) => set({ pct: clamp(Number(e.target.value) || 0, 1, 50) })} />{t('b.deduct.pct')}</label>}
-                </div>
-              )}
-              <Switch checked={d.allowResubmit} onChange={(v) => set({ allowResubmit: v })} label={t('b.resubmit')} hint={t('b.resubmit.hint')} />
-              <div className="rounded-xl bg-ags-gold-50 ring-1 ring-amber-200 p-3 text-sm">
-                <p className="font-bold text-ags-navy mb-1">{t('b.studentsSee')}</p>
-                <p className="text-ags-navy/90">{latePolicyText(t, fmt, preview)}</p>
-              </div>
-              <dl className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-xl bg-slate-50 p-2"><dt className="text-[0.7rem] text-ags-slate">{t('b.total')}</dt><dd className="font-bold text-lg tabular">{fmt.n(preview.points)}</dd></div>
-                <div className="rounded-xl bg-slate-50 p-2"><dt className="text-[0.7rem] text-ags-slate">{t('b.autoMarked')}</dt><dd className="font-bold text-lg tabular">{fmt.n(autoPts)}</dd></div>
-                <div className="rounded-xl bg-slate-50 p-2"><dt className="text-[0.7rem] text-ags-slate">{t('b.teacherMarked')}</dt><dd className="font-bold text-lg tabular">{fmt.n(teacherPts)}</dd></div>
-              </dl>
-              <button type="button" className="btn btn-gold w-full btn-lg" onClick={publish}><Send aria-hidden="true" className="w-4 h-4 flip-rtl" />{d.publishMode === 'schedule' ? t('b.scheduleBtn') : t('b.publishBtn')}</button>
-              <button type="button" className="btn btn-ghost w-full btn-sm" onClick={() => { setBuilder(newDraft(now)); setErrors({}); }}>{t('b.discard')}</button>
-              <p className="hint text-center">{t('b.draftKept')}</p>
-            </aside>
-          </div>
-        </>
+      {help > 0 && (
+        <button type="button" onClick={() => navigate({ name: 'progress' })} className="card w-full text-start p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
+          <span className="w-11 h-11 rounded-xl bg-amber-50 text-amber-700 inline-flex items-center justify-center"><Users aria-hidden="true" className="w-5 h-5" /></span>
+          <span className="flex-1 font-medium text-ags-navy">{t('th.help', { n: help })}</span>
+          <ArrowRight aria-hidden="true" className="w-5 h-5 text-ags-indigo flip-rtl" />
+        </button>
       )}
     </div>
   );
 }
 
-/* ---------- grading queue, submissions table, grading view ---------- */
-
-function GradingQueue() {
-  const { t, fmt, lang, now, db, navigate } = useApp();
-  const rows = teacherAssignments(db).filter((a) => isPublished(a, now)).flatMap((a) => a.classes.map((cls) => ({ a, cls, s: classStats(db, a, cls, now) })));
-  const waiting = rows.filter((r) => r.s.toGrade > 0 || r.s.graded > 0).sort((x, y) => y.s.toGrade - x.s.toGrade);
-  const others = rows.filter((r) => !waiting.includes(r)).sort((x, y) => y.a.dueAt - x.a.dueAt);
-  const Row = ({ r }) => (
-    <button type="button" onClick={() => navigate({ name: 'submissions', id: r.a.id, cls: r.cls, filter: r.s.toGrade ? 'toGrade' : 'all' })} className="w-full text-start card p-4 flex flex-wrap items-center gap-3 hover:shadow-md transition">
-      <span className="flex-1 min-w-[12rem]">
-        <span className="block font-bold text-ags-navy" dir="auto">{r.a.title}</span>
-        <span className="block text-sm text-ags-slate">{clsLabel(r.cls, lang, true)} · {r.a.dueAt > now ? dueLabel(t, fmt, r.a.dueAt, now) : t('due.was', { when: fmt.date(r.a.dueAt) })}</span>
-      </span>
-      {r.s.toGrade > 0 && <span className="text-sm font-bold bg-ags-gold text-ags-navy rounded-full px-3 py-1">{t('ta.toGrade', { n: r.s.toGrade })}</span>}
-      {r.s.graded > 0 && <StatusChip status="graded" label={`${t('st.graded')} · ${fmt.n(r.s.graded)}`} />}
-      <span className="text-sm text-ags-slate tabular">{t('td.handedIn', { n: r.s.handedIn, total: r.s.total })}</span>
-      <ChevronRight aria-hidden="true" className="w-5 h-5 text-slate-400 flip-rtl" />
-    </button>
-  );
-  return (
-    <div>
-      <PageHeader title={t('sub.queue')} subtitle={t('sub.queue.hint')} />
-      <div className="space-y-3 mb-8">{waiting.map((r) => <Row key={r.a.id + r.cls} r={r} />)}{!waiting.length && <div className="card"><EmptyState icon={CheckCircle2} title={t('td.att.none')} /></div>}</div>
-      <SectionTitle icon={ClipboardList} title={t('sub.allAssignments')} />
-      <div className="space-y-3">{others.map((r) => <Row key={r.a.id + r.cls} r={r} />)}</div>
-    </div>
-  );
-}
-
-const FILTER_MATCH = {
-  all: () => true, toGrade: (s) => s === 'submitted' || s === 'late', submitted: (s) => s === 'submitted', late: (s) => s === 'late',
-  missing: (s) => s === 'missing', graded: (s) => s === 'graded', returned: (s) => s === 'returned' || s === 'revision', notYet: (s) => s === 'notYet',
-};
-
-function SubmissionsTable({ id, cls: clsIn, filter: filterIn }) {
+function ClassView({ id, cls }) {
   const { t, fmt, lang, now, db, navigate, actions } = useApp();
   const a = db.assignments[id];
-  const [cls, setCls] = useState(clsIn && a?.classes.includes(clsIn) ? clsIn : a?.classes[0]);
-  const [filter, setFilter] = useState(filterIn || 'all');
   if (!a) return <div className="card"><EmptyState title={t('a.notFound')} /></div>;
-  const roster = ROSTERS[cls] || [];
-  const rows = roster.map((stu) => { const sub = db.submissions[subKey(a.id, stu.id)]; return { stu, sub, st: teacherStatus(a, sub, now) }; });
-  const s = classStats(db, a, cls, now);
-  const counts = Object.fromEntries(Object.keys(FILTER_MATCH).map((k) => [k, rows.filter((r) => FILTER_MATCH[k](r.st)).length]));
-  const shown = rows.filter((r) => FILTER_MATCH[filter](r.st));
-  const chips = ['all', 'toGrade', 'submitted', 'late', 'missing', 'graded', 'returned', 'notYet'].filter((k) => k === 'all' || k === filter || counts[k] > 0);
-  const chipLabel = { all: 'sub.all', toGrade: 'sub.toGrade', submitted: 'st.submitted', late: 'st.late', missing: 'st.missing', graded: 'st.graded', returned: 'st.returned', notYet: 'st.notYet' };
-  const missingCount = counts.missing + counts.notYet;
+  const rows = (ROSTERS[cls] || []).map((stu) => { const sub = db.submissions[subKey(a.id, stu.id)]; return { stu, sub, st: teacherStatus(a, sub, now) }; });
+  const groups = [
+    ['toMark', rows.filter((r) => toMarkStatus(r.st)), Inbox],
+    ['notIn', rows.filter((r) => r.st === 'missing' || r.st === 'notYet'), Clock],
+    ['marked', rows.filter((r) => ['returned', 'revision', 'graded'].includes(r.st)), CheckCircle2],
+  ];
+  const first = groups[0][1][0];
   return (
-    <div>
-      <PageHeader onBack={() => navigate({ name: 'grading' })} backLabel={t('sub.queue')} title={a.title}
-        eyebrow={<SubjectTag code={a.subject} />}
-        subtitle={`${a.dueAt > now ? dueLabel(t, fmt, a.dueAt, now) : t('due.was', { when: `${fmt.date(a.dueAt)} · ${fmt.time(a.dueAt)}` })} · ${t(`type.${submissionType(a)}`)} · ${t('pts', { n: a.points })}`}
-        actions={<>
-          <button type="button" className="btn btn-secondary btn-sm" disabled={!missingCount} onClick={() => actions.remind(a.id, cls)}><Megaphone aria-hidden="true" className="w-4 h-4" />{t('sub.remind')}</button>
-          <button type="button" className="btn btn-primary btn-sm" disabled={!counts.graded} onClick={() => actions.returnAllGraded(a.id, cls)}><Send aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('sub.returnAll')}{counts.graded ? ` (${fmt.n(counts.graded)})` : ''}</button>
-        </>} />
-      {a.classes.length > 1 && <div className="mb-4 scroll-x"><Segmented ariaLabel={t('b.classes')} value={cls} onChange={(v) => { setCls(v); setFilter('all'); }} options={a.classes.map((c) => ({ value: c, label: clsLabel(c, lang, true) }))} /></div>}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <StatCard size="sm" icon={Users} value={t('td.handedIn', { n: s.handedIn, total: s.total })} label={t('sub.handedIn')} />
-        <StatCard size="sm" icon={CheckCircle2} tone="green" value={fmt.n(s.onTime)} label={t('in.onTime')} />
-        <StatCard size="sm" icon={Clock} tone="amber" value={fmt.n(s.lateHanded)} label={t('in.late')} />
-        <StatCard size="sm" icon={AlertCircle} tone="red" value={fmt.n(s.missing)} label={t('in.missing')} />
+    <div className="max-w-3xl mx-auto">
+      <button type="button" onClick={() => navigate({ name: 'home' })} className="btn btn-ghost -ms-3 mb-3"><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('tt.home')}</button>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-ags-navy"><bdi>{a.title}</bdi></h1>
+          <p className="text-ags-slate mt-1"><bdi>{clsLabel(cls, lang, true)}</bdi> · {a.dueAt > now ? dueLabel(t, fmt, a.dueAt, now) : t('card.wasDue', { day: fmt.date(a.dueAt) })}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {groups[1][1].length > 0 && <button type="button" className="btn btn-secondary" onClick={() => actions.remind(a.id, cls)}><Bell aria-hidden="true" className="w-4 h-4" />{t('cv.remindAll', { n: groups[1][1].length })}</button>}
+          {first && <button type="button" className="btn btn-primary" onClick={() => navigate({ name: 'mark', id: a.id, sid: first.stu.id })}><PenLine aria-hidden="true" className="w-4 h-4" />{t('th.startMarking')}</button>}
+        </div>
       </div>
-      <div className="scroll-x mb-3" role="group" aria-label={t('sub.filter')}><div className="flex gap-2 w-max pb-1">
-        {chips.map((k) => (
-          <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)}
-            className={cx('rounded-full px-3 py-1.5 text-sm ring-1 min-h-[2.25rem] inline-flex items-center gap-1.5', filter === k ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white ring-slate-200 hover:ring-ags-indigo text-ags-navy')}>
-            {t(chipLabel[k])}<span className={cx('text-xs tabular rounded-full px-1.5', filter === k ? 'bg-white/20' : 'bg-slate-100')}>{fmt.n(counts[k])}</span>
-          </button>
-        ))}
-      </div></div>
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <caption className="sr-only">{a.title} — {clsLabel(cls, lang, true)}</caption>
-          <thead className="bg-slate-50 text-ags-slate text-xs hidden md:table-header-group">
-            <tr><th scope="col" className="text-start font-medium px-4 py-3">{t('sub.student')}</th><th scope="col" className="text-start font-medium px-4 py-3">{t('sub.status')}</th><th scope="col" className="text-start font-medium px-4 py-3">{t('sub.time')}</th><th scope="col" className="text-start font-medium px-4 py-3">{t('sub.mark')}</th><th scope="col" className="px-4 py-3"><span className="sr-only">{t('ta.actions')}</span></th></tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {shown.map(({ stu, sub, st }) => {
-              const has = HANDED_IN.includes(st);
-              return (
-                <tr key={stu.id} className="hover:bg-ags-indigo-50/40 flex flex-wrap md:table-row items-center px-4 py-3 md:p-0 gap-x-3 gap-y-1.5">
-                  <th scope="row" className="md:px-4 md:py-3 text-start font-medium text-ags-navy flex items-center gap-2.5 w-full md:w-auto md:table-cell">
-                    <span className="inline-flex items-center gap-2.5"><Avatar name={stu.en} size="sm" /><bdi>{studentName(stu, lang)}</bdi></span>
-                  </th>
-                  <td className="md:px-4 md:py-3"><StatusChip status={st} /></td>
-                  <td className="md:px-4 md:py-3 text-ags-slate tabular text-xs md:text-sm">{sub?.submittedAt && has ? <>{fmt.date(sub.submittedAt)} · {fmt.time(sub.submittedAt)}{sub.late && <span className="block text-amber-800 text-xs">{t('late.days', { n: lateDays(a.dueAt, sub.submittedAt) })}</span>}</> : '—'}</td>
-                  <td className="md:px-4 md:py-3 tabular font-medium">{typeof sub?.mark === 'number' && ['graded', 'returned', 'revision'].includes(st) ? fmt.score(sub.mark, a.points) : '—'}</td>
-                  <td className="md:px-4 md:py-3 ms-auto md:text-end">
-                    {has ? <button type="button" className={cx('btn btn-sm', st === 'submitted' || st === 'late' ? 'btn-primary' : 'btn-secondary')} onClick={() => navigate({ name: 'grade', id: a.id, sid: stu.id })}>{st === 'submitted' || st === 'late' ? <><PenLine aria-hidden="true" className="w-4 h-4" />{t('sub.grade')}</> : <><Eye aria-hidden="true" className="w-4 h-4" />{t('sub.view')}</>}</button>
-                      : <button type="button" className="btn btn-ghost btn-sm" onClick={() => actions.remind(a.id, cls, [stu.id])}><Bell aria-hidden="true" className="w-4 h-4" />{t('sub.remindOne')}</button>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {!shown.length && <EmptyState title={t('sub.empty')} />}
-      </div>
+      {groups.map(([k, list, I]) => list.length > 0 && (
+        <section key={k} className="card p-5 mb-4" aria-labelledby={`cv-${k}`}>
+          <h2 id={`cv-${k}`} className="sr-only">{t(`cv.${k}`)}</h2>
+          <H2 icon={I} count={list.length} tone={k === 'notIn' ? 'text-amber-700' : k === 'marked' ? 'text-emerald-700' : undefined}>{t(`cv.${k}`)}</H2>
+          <ul className="divide-y divide-slate-100">
+            {list.map(({ stu, sub, st }) => (
+              <li key={stu.id} className="py-2.5 flex items-center gap-3">
+                <Avatar name={stu.en} size="sm" />
+                <span className="flex-1 min-w-0"><bdi className="font-medium text-ags-navy">{studentName(stu, lang)}</bdi>
+                  {sub?.late && HANDED_IN.includes(st) && <span className="ms-2 text-xs text-amber-800">{t('st.late')}</span>}
+                </span>
+                {k === 'marked' && typeof sub?.mark === 'number' && <span className="text-sm font-bold tabular text-ags-navy">{fmt.score(sub.mark, a.points)}</span>}
+                {k === 'notIn' ? <StatusChip status={st} size="sm" />
+                  : <button type="button" className={cx('btn btn-sm', k === 'toMark' ? 'btn-primary' : 'btn-secondary')} onClick={() => navigate({ name: 'mark', id: a.id, sid: stu.id })}>{k === 'toMark' ? t('cv.mark') : t('cv.view')}</button>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
 
-const QUICK_COMMENTS = ['qc.working', 'qc.signs', 'qc.improve', 'qc.simplify', 'qc.units'];
+const QUICK = ['qc.working', 'qc.signs', 'qc.improve', 'qc.simplify'];
 
-function GradingView({ id, sid }) {
+function MarkView({ id, sid }) {
   const { t, fmt, lang, now, db, navigate, actions } = useApp();
   const a = db.assignments[id]; const stu = STUDENTS[sid];
   const sub = a ? db.submissions[subKey(a.id, sid)] : null;
-  const [rub, setRub] = useState(() => ({ ...(sub?.rubricScores || {}) }));
+  const auto = a && sub ? autoScore(a, sub.answers) : { score: 0, max: 0, count: 0 };
+  const [mark, setMark] = useState(() => (typeof sub?.mark === 'number' ? sub.mark : a && auto.count && auto.max === a.points ? auto.score : null));
   const [comment, setComment] = useState(sub?.comment || '');
   const [anns, setAnns] = useState(() => JSON.parse(JSON.stringify(sub?.annotations || {})));
-  const [override, setOverride] = useState(null);
-  const [tool, setTool] = useState('pen');
+  const [tool, setTool] = useState('tick');
   const [pageIdx, setPageIdx] = useState(0);
   if (!a || !stu) return <div className="card"><EmptyState title={t('a.notFound')} /></div>;
-  const cls = stu.cls;
-  const st = teacherStatus(a, sub, now);
-  const roster = ROSTERS[cls];
-  const statusOf = (s) => teacherStatus(a, db.submissions[subKey(a.id, s.id)], now);
-  const idx = roster.findIndex((s) => s.id === sid);
-  const after = [...roster.slice(idx + 1), ...roster.slice(0, idx)];
-  const nextStu = after.find((s) => ['submitted', 'late'].includes(statusOf(s))) || after.find((s) => HANDED_IN.includes(statusOf(s)));
-  const before = [...roster.slice(0, idx)].reverse();
-  const prevStu = before.find((s) => HANDED_IN.includes(statusOf(s)));
-  const left = roster.filter((s) => ['submitted', 'late'].includes(statusOf(s))).length;
-  const has = HANDED_IN.includes(st);
+  const cls = stu.cls; const st = teacherStatus(a, sub, now); const has = HANDED_IN.includes(st);
+  const left = (ROSTERS[cls] || []).filter((s) => toMarkStatus(teacherStatus(a, db.submissions[subKey(a.id, s.id)], now))).length;
   const pages = has ? a.blocks.filter((b) => b.type === 'paper').flatMap((b) => sub.answers[b.id] || []) : [];
   const page = pages[clamp(pageIdx, 0, Math.max(0, pages.length - 1))];
-  const auto = has ? autoScore(a, sub.answers) : { score: 0, max: 0, count: 0 };
-  const rubTotal = sum(a.rubric.map((c) => rub[c.id] || 0));
-  const raw = round1(auto.score + rubTotal);
-  const days = has && sub.late ? lateDays(a.dueAt, sub.submittedAt) : 0;
-  const deduct = a.latePolicy?.deduct && days ? Math.min(1, ((a.latePolicy.pct || 0) / 100) * days) : 0;
-  const suggested = round1(raw * (1 - deduct));
-  const finalMark = override != null ? override : suggested;
-  const addAnn = (an) => page && setAnns((m) => ({ ...m, [page.id]: [...(m[page.id] || []), an] }));
-  const undo = () => page && setAnns((m) => ({ ...m, [page.id]: (m[page.id] || []).slice(0, -1) }));
-  const save = (status) => actions.saveGrade(a.id, sid, { rubricScores: rub, comment: comment.trim(), annotations: anns, mark: clamp(finalMark, 0, a.points), autoScore: auto.score }, status);
-  const goStu = (s) => s && navigate({ name: 'grade', id: a.id, sid: s.id });
-  const tools = [['pen', PenLine, 'g.pen'], ['tick', Check, 'g.tick'], ['cross', X, 'g.cross'], ['text', Type, 'g.text']];
-
+  const others = a.blocks.filter((b) => b.type !== 'paper');
+  const first = studentFirst(stu, lang);
+  const send = (status) => {
+    if (mark == null) return;
+    actions.sendBack(a.id, sid, { mark, comment: comment.trim(), annotations: anns, autoScore: auto.score }, status);
+    const next = firstToMark(db, a, cls, now, sid);
+    navigate(next ? { name: 'mark', id: a.id, sid: next.id } : { name: 'class', id: a.id, cls });
+  };
+  const tools = [['tick', Check, 'mk.tick'], ['cross', X, 'mk.cross'], ['pen', PenLine, 'mk.pen']];
+  const range = a.points <= 20 ? Array.from({ length: a.points + 1 }, (_, i) => i) : null;
   return (
-    <div>
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <button type="button" onClick={() => navigate({ name: 'submissions', id: a.id, cls })} className="btn btn-ghost btn-sm -ms-2"><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('sub.title')}</button>
-        <span className="text-sm text-ags-slate ms-auto">{left ? t('g.queueLeft', { n: left, cls: clsLabel(cls, lang) }) : t('g.allDone')}</span>
-        <button type="button" className="btn btn-secondary btn-sm" disabled={!prevStu} onClick={() => goStu(prevStu)}><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('g.prev')}</button>
-        <button type="button" className="btn btn-primary btn-sm" disabled={!nextStu} onClick={() => goStu(nextStu)}>{t('g.next')}<ArrowRight aria-hidden="true" className="w-4 h-4 flip-rtl" /></button>
+    <div className="max-w-6xl mx-auto">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <button type="button" onClick={() => navigate({ name: 'class', id: a.id, cls })} className="btn btn-ghost -ms-3"><ArrowLeft aria-hidden="true" className="w-4 h-4 flip-rtl" /><bdi>{a.title}</bdi> · <bdi>{clsLabel(cls, lang)}</bdi></button>
+        <span className="ms-auto text-sm text-ags-slate">{left ? t('mk.left', { n: left }) : t('mk.noneLeft')}</span>
       </div>
-      <div className="card p-4 sm:p-5 mb-5 flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3 mb-5">
         <Avatar name={stu.en} size="lg" />
-        <div className="flex-1 min-w-[12rem]">
-          <h1 className="text-xl font-bold text-ags-navy"><bdi>{studentName(stu, lang)}</bdi></h1>
-          <p className="text-sm text-ags-slate" dir="auto">{a.title} · {clsLabel(cls, lang, true)}</p>
-        </div>
-        <div className="text-end">
-          <StatusChip status={st} size="lg" />
-          {has && <p className="text-xs text-ags-slate mt-1.5 tabular">{fmt.date(sub.submittedAt)} · {fmt.time(sub.submittedAt)}{sub.late && <span className="text-amber-800"> · {t('late.days', { n: days })}</span>}</p>}
-        </div>
+        <h1 className="text-2xl font-bold text-ags-navy flex-1"><bdi>{studentName(stu, lang)}</bdi></h1>
+        {has && <span className="text-sm text-ags-slate">{t('mk.handedIn', { when: agoLabel(t, sub.submittedAt, now) })}{sub.late && <span className="text-amber-800"> · {t('late.days', { n: lateDays(a.dueAt, sub.submittedAt) })}</span>}</span>}
       </div>
 
       {!has ? (
-        <div className="card"><EmptyState icon={Clock} title={t('g.noSubmission', { name: studentFirst(stu, lang) })} action={<button type="button" className="btn btn-secondary" onClick={() => actions.remind(a.id, cls, [stu.id])}><Bell aria-hidden="true" className="w-4 h-4" />{t('g.remindOne', { name: studentFirst(stu, lang) })}</button>} /></div>
+        <div className="card"><EmptyState icon={Clock} title={t('mk.notIn', { name: first })} action={<button type="button" className="btn btn-secondary" onClick={() => actions.remind(a.id, cls, [stu.id])}><Bell aria-hidden="true" className="w-4 h-4" />{t('mk.remindOne', { name: first })}</button>} /></div>
       ) : (
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_23rem] gap-5 items-start">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-5 items-start">
           <div className="space-y-5 min-w-0">
             {pages.length > 0 && (
-              <section className="card p-4 sm:p-5" aria-labelledby="pg-h">
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <h2 id="pg-h" className="font-bold text-ags-navy me-auto">{t('g.pages')}</h2>
-                  {pages.length > 1 && <Segmented size="sm" ariaLabel={t('g.pages')} value={pageIdx} onChange={setPageIdx} options={pages.map((p, i) => ({ value: i, label: t('p.page', { n: i + 1 }) }))} />}
+              <section className="card p-4 sm:p-5" aria-label={t('mk.work')}>
+                <div className="flex flex-wrap items-center gap-2 mb-3" role="toolbar" aria-label={t('mk.tools')}>
+                  {tools.map(([k, I, label]) => <button key={k} type="button" aria-pressed={tool === k} onClick={() => setTool(k)} className={cx('btn', tool === k ? 'btn-primary' : 'btn-secondary')}><I aria-hidden="true" className="w-4 h-4" />{t(label)}</button>)}
+                  <button type="button" className="btn btn-ghost" onClick={() => page && setAnns((m) => ({ ...m, [page.id]: (m[page.id] || []).slice(0, -1) }))} disabled={!(anns[page?.id] || []).length}><Undo2 aria-hidden="true" className="w-4 h-4" />{t('mk.undo')}</button>
+                  {pages.length > 1 && <span className="ms-auto"><Segmented size="sm" ariaLabel={t('mk.work')} value={pageIdx} onChange={setPageIdx} options={pages.map((p, i) => ({ value: i, label: t('photo.page', { n: i + 1 }) }))} /></span>}
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5 mb-3 rounded-xl bg-slate-50 ring-1 ring-slate-200 p-1.5" role="toolbar" aria-label={t('g.tools')}>
-                  {tools.map(([k, I, label]) => (
-                    <button key={k} type="button" aria-pressed={tool === k} onClick={() => setTool(k)} className={cx('btn btn-sm', tool === k ? 'btn-primary' : 'btn-ghost')}><I aria-hidden="true" className="w-4 h-4" />{t(label)}</button>
-                  ))}
-                  <span className="w-px h-6 bg-slate-300 mx-1" aria-hidden="true" />
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={undo} disabled={!(anns[page?.id] || []).length}><Undo2 aria-hidden="true" className="w-4 h-4" />{t('g.undo')}</button>
-                  <span className="text-xs text-ags-slate ms-auto px-2 hidden sm:inline">{t('g.annotHint')}</span>
-                </div>
-                {page && <div className="max-w-xl mx-auto"><AnnotatedPage src={pageSrc(page)} annotations={anns[page.id] || []} editable tool={tool} onAdd={addAnn} alt={t('p.page', { n: pageIdx + 1 })} /></div>}
+                <p className="hint mb-3">{t('mk.hint')}</p>
+                {page && <div className="max-w-xl mx-auto"><AnnotatedPage src={pageSrc(page)} annotations={anns[page.id] || []} editable tool={tool} onAdd={(an) => setAnns((m) => ({ ...m, [page.id]: [...(m[page.id] || []), an] }))} alt={t('photo.page', { n: pageIdx + 1 })} /></div>}
               </section>
             )}
-            {a.blocks.some((b) => b.type !== 'paper') && (
-              <section className="card p-4 sm:p-5" aria-labelledby="ans-h">
-                <h2 id="ans-h" className="font-bold text-ags-navy mb-3">{t('g.answers')}</h2>
+            {others.length > 0 && (
+              <section className="card p-4 sm:p-5" aria-label={t('mk.answers')}>
+                {auto.count > 0 && <p className="mb-3 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 p-3 text-sm text-emerald-950 flex items-center gap-2"><ListChecks aria-hidden="true" className="w-4 h-4" />{t('mk.auto', { score: fmt.score(auto.score, auto.max) })}</p>}
                 <ol className="space-y-3">
-                  {a.blocks.filter((b) => b.type !== 'paper').map((b) => {
+                  {others.map((b) => {
                     const v = sub.answers[b.id]; const pts = isAuto(b) ? scoreBlock(b, v) : null;
+                    let ans = '—';
+                    if (b.type === 'mcq' && v != null) ans = b.options[v];
+                    else if (b.type === 'tf' && v != null) ans = v ? t('q.true') : t('q.false');
+                    else if (b.type === 'checkbox' && v) ans = v.map((i) => b.options[i]).join(' · ');
+                    else if (b.type === 'match' && v) ans = b.pairs.map((p, i) => `${p.left} → ${b.pairs[v[i]]?.right ?? '—'}`).join(' · ');
+                    else if (b.type === 'file' && v) ans = v.map((f) => f.name).join(', ');
+                    else if (v) ans = String(v);
                     return (
                       <li key={b.id} className="rounded-xl ring-1 ring-slate-200 p-3.5">
                         <div className="flex items-start gap-2">
-                          <p className="font-medium text-ags-navy flex-1" dir={a.lang === 'ar' ? 'rtl' : 'ltr'}>{a.blocks.indexOf(b) + 1}. {b.prompt}</p>
-                          {pts != null && <span className={cx('text-xs font-bold rounded-full px-2 py-0.5 ring-1 inline-flex items-center gap-1', pts >= b.points ? 'bg-emerald-50 text-emerald-800 ring-emerald-200' : 'bg-rose-50 text-rose-800 ring-rose-200')}>{pts >= b.points ? <Check aria-hidden="true" className="w-3 h-3" /> : <X aria-hidden="true" className="w-3 h-3" />}{fmt.score(pts, b.points)}</span>}
-                          {pts == null && <span className="text-xs text-ags-slate">{t('pts', { n: b.points })}</span>}
+                          <p className="font-medium text-ags-navy flex-1" dir={a.lang === 'ar' ? 'rtl' : 'ltr'}>{b.prompt}</p>
+                          {pts != null && <span className={cx('text-xs font-bold rounded-full px-2 py-0.5 ring-1 inline-flex items-center gap-1', pts >= b.points ? 'bg-emerald-50 text-emerald-800 ring-emerald-200' : 'bg-rose-50 text-rose-800 ring-rose-200')}>{pts >= b.points ? <Check aria-hidden="true" className="w-3 h-3" /> : <X aria-hidden="true" className="w-3 h-3" />}{pts >= b.points ? t('fb.correct') : t('fb.wrong')}</span>}
                         </div>
-                        <div className="mt-2 text-sm text-ags-navy/90"><AnswerSummary a={a} b={b} v={v} /></div>
+                        <p className="mt-1.5 text-sm text-ags-navy/90 whitespace-pre-wrap" dir="auto">{ans}</p>
                         {b.type === 'file' && (v || []).some((f) => f.src) && <div className="mt-2 flex gap-2">{v.filter((f) => f.src).map((f) => <img key={f.id} src={f.src} alt={f.name} className="max-h-48 rounded-lg ring-1 ring-slate-200" />)}</div>}
                       </li>
                     );
@@ -4079,68 +2466,30 @@ function GradingView({ id, sid }) {
                 </ol>
               </section>
             )}
-            {sub.note && <section className="card p-4"><p className="text-sm"><span className="font-bold text-ags-navy">{t('g.noteFromStudent')}:</span> <span dir="auto">{sub.note}</span></p></section>}
+            {sub.note && <p className="card p-4 text-sm"><span className="font-bold text-ags-navy">{t('mk.note')}:</span> <span dir="auto">{sub.note}</span></p>}
           </div>
 
-          <aside className="card p-5 space-y-5 lg:sticky lg:top-20" aria-label={t('g.panel')}>
-            {auto.count > 0 && (
-              <div className="rounded-xl bg-emerald-50 ring-1 ring-emerald-200 p-3.5 flex items-center gap-3">
-                <ListChecks aria-hidden="true" className="w-5 h-5 text-emerald-700" />
-                <span className="flex-1 text-sm text-emerald-950">{t('g.auto')}</span>
-                <b className="tabular text-emerald-950">{fmt.score(auto.score, auto.max)}</b>
-              </div>
-            )}
-            {a.rubric.length > 0 && (
-              <div>
-                <h2 className="font-bold text-ags-navy mb-2">{t('g.rubric')}</h2>
-                <div className="space-y-3">
-                  {a.rubric.map((c) => {
-                    const name = c.key ? t(`rub.${c.key}`) : c.label;
-                    return (
-                      <div key={c.id}>
-                        <div className="flex justify-between text-sm mb-1"><span id={`rc_${c.id}`}>{name}</span><span className="tabular text-ags-slate">{fmt.score(rub[c.id] ?? 0, c.max)}</span></div>
-                        <div role="radiogroup" aria-labelledby={`rc_${c.id}`} className="flex flex-wrap gap-1">
-                          {Array.from({ length: c.max + 1 }, (_, v) => (
-                            <button key={v} type="button" role="radio" aria-checked={(rub[c.id] ?? -1) === v} onClick={() => { setRub((r) => ({ ...r, [c.id]: v })); setOverride(null); }}
-                              className={cx('min-w-[2.25rem] h-9 rounded-lg text-sm font-bold tabular ring-1 transition-colors', (rub[c.id] ?? -1) === v ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white text-ags-navy ring-slate-300 hover:ring-ags-indigo')}>{fmt.n(v)}</button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+          <aside className="card p-5 space-y-5 lg:sticky lg:top-20" aria-label={t('mk.panel')}>
+            <div>
+              <p className="label" id="mk-mark">{t('mk.mark', { n: a.points })}</p>
+              {range ? (
+                <div role="radiogroup" aria-labelledby="mk-mark" className="flex flex-wrap gap-1.5">
+                  {range.map((v) => <button key={v} type="button" role="radio" aria-checked={mark === v} onClick={() => setMark(v)} className={cx('min-w-[2.6rem] h-11 rounded-xl text-base font-bold tabular ring-1 transition-colors', mark === v ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white text-ags-navy ring-slate-300 hover:ring-ags-indigo')}>{fmt.n(v)}</button>)}
                 </div>
-              </div>
-            )}
-            <div>
-              <label htmlFor="g-final" className="label">{t('g.final')}</label>
-              <div className="flex items-center gap-2">
-                <input id="g-final" type="number" min={0} max={a.points} step={0.5} className="input !w-24 text-lg font-bold tabular" value={finalMark} onChange={(e) => setOverride(clamp(Number(e.target.value) || 0, 0, a.points))} />
-                <span className="text-ags-slate">/ {fmt.n(a.points)}</span>
-                {override != null && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOverride(null)}>{t('g.useSuggested')}</button>}
-              </div>
-              <p className="hint mt-1.5">{t('g.breakdown', { auto: auto.score, rub: rubTotal })}</p>
-              {deduct > 0 && <p className="text-xs text-amber-800 mt-1">{t('g.deductSuggest', { pct: fmt.pct(deduct), mark: suggested })}</p>}
+              ) : <input type="number" min={0} max={a.points} className="input !w-28 text-lg font-bold" aria-labelledby="mk-mark" value={mark ?? ''} onChange={(e) => setMark(e.target.value === '' ? null : clamp(Number(e.target.value), 0, a.points))} />}
             </div>
             <div>
-              <label htmlFor="g-comment" className="label">{t('g.comment')}</label>
-              <textarea id="g-comment" className="input min-h-[6.5rem]" dir="auto" value={comment} placeholder={t('g.commentPh')} onChange={(e) => setComment(e.target.value)} />
-              <p className="text-xs text-ags-slate mt-2 mb-1.5">{t('g.quick')}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {QUICK_COMMENTS.map((k) => (
-                  <button key={k} type="button" onClick={() => setComment((c) => (c.trim() ? `${c.trim()} ${t(k)}.` : `${t(k)}.`))} className="rounded-full px-2.5 py-1 text-xs ring-1 ring-slate-300 bg-white hover:ring-ags-indigo hover:bg-ags-indigo-50 text-ags-navy min-h-[2rem]">+ {t(k)}</button>
-                ))}
+              <label htmlFor="mk-c" className="label">{t('mk.comment')}</label>
+              <textarea id="mk-c" className="input min-h-[6rem]" dir="auto" value={comment} placeholder={t('mk.commentPh')} onChange={(e) => setComment(e.target.value)} />
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {QUICK.map((k) => <button key={k} type="button" onClick={() => setComment((c) => (c.trim() ? `${c.trim()} ${t(k)}.` : `${t(k)}.`))} className="rounded-full px-3 py-1 text-sm ring-1 ring-slate-300 bg-white hover:ring-ags-indigo hover:bg-ags-indigo-50 text-ags-navy min-h-[2.25rem]">+ {t(k)}</button>)}
               </div>
             </div>
-            {(st === 'returned' || st === 'revision') && sub.returnedAt && (
-              <p className="rounded-xl bg-emerald-50 ring-1 ring-emerald-200 p-3 text-sm text-emerald-950 flex gap-2" role="status"><CheckCircle2 aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0" />{t(st === 'revision' ? 'g.revised' : 'g.returned', { name: studentFirst(stu, lang) })} · {agoLabel(t, sub.returnedAt, now)}</p>
-            )}
+            {(st === 'returned' || st === 'revision') && <p role="status" className="rounded-xl bg-emerald-50 ring-1 ring-emerald-200 p-3 text-sm text-emerald-950 flex gap-2"><CheckCircle2 aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0" />{t('mk.sent', { when: agoLabel(t, sub.returnedAt, now) })}</p>}
             <div className="grid gap-2">
-              <button type="button" className="btn btn-primary btn-lg" onClick={() => save('returned')}><Send aria-hidden="true" className="w-4 h-4 flip-rtl" />{t('g.return')}</button>
-              <div className="grid gap-2">
-                <button type="button" className="btn btn-secondary" onClick={() => save('revision')}><RotateCcw aria-hidden="true" className="w-4 h-4" />{t('g.revise')}</button>
-                <button type="button" className="btn btn-ghost" onClick={() => save('graded')}><BadgeCheck aria-hidden="true" className="w-4 h-4" />{t('g.save')}</button>
-              </div>
-              {nextStu && <button type="button" className="btn btn-ghost" onClick={() => goStu(nextStu)}>{t('g.next')}: <bdi>{studentFirst(nextStu, lang)}</bdi><ArrowRight aria-hidden="true" className="w-4 h-4 flip-rtl" /></button>}
+              <button type="button" className="btn btn-primary btn-lg" disabled={mark == null} onClick={() => send('returned')}><Send aria-hidden="true" className="w-5 h-5 flip-rtl" />{t('mk.send', { name: first })}</button>
+              {mark == null && <p className="hint text-center">{t('mk.pick')}</p>}
+              <button type="button" className="btn btn-secondary" disabled={mark == null} onClick={() => send('revision')}><RotateCcw aria-hidden="true" className="w-4 h-4" />{t('mk.redo')}</button>
             </div>
           </aside>
         </div>
@@ -4149,172 +2498,269 @@ function GradingView({ id, sid }) {
   );
 }
 
-/* ---------- class insights (plain SVG / div charts, no library) ---------- */
-
-const SERIES = { onTime: '#0F8A5F', late: '#D08700', missing: '#D9486A' };
-
-function ChartCard({ title, subtitle, legend, table, children, id }) {
-  const { t } = useApp();
-  const [asTable, setAsTable] = useState(false);
+function Progress({ cls: clsIn }) {
+  const { t, fmt, lang, now, db, actions, guide, markGuide } = useApp();
+  const [cls, setCls] = useState(clsIn || SARAH_CLASSES[0]);
+  useEffect(() => { if (guide.steps[2]) markGuide(5); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const list = teacherAssignments(db).filter((a) => a.classes.includes(cls) && isPublished(a, now) && now - a.dueAt < 42 * DAY).sort((x, y) => x.dueAt - y.dueAt);
+  const help = supportList(db, cls, now);
   return (
-    <section className="card p-5" aria-labelledby={id}>
-      <div className="flex flex-wrap items-start gap-2 mb-4">
-        <div className="flex-1 min-w-[12rem]">
-          <h2 id={id} className="font-bold text-ags-navy">{title}</h2>
-          {subtitle && <p className="text-xs text-ags-slate mt-0.5">{subtitle}</p>}
-        </div>
-        {table && <button type="button" className="btn btn-ghost btn-sm" aria-pressed={asTable} onClick={() => setAsTable((v) => !v)}>{asTable ? <BarChart3 aria-hidden="true" className="w-4 h-4" /> : <Table2 aria-hidden="true" className="w-4 h-4" />}{asTable ? t('in.chart') : t('in.table')}</button>}
+    <div className="max-w-4xl mx-auto">
+      <TeacherTabs />
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div><h1 className="text-3xl font-bold text-ags-navy">{t('pg.title')}</h1><p className="text-ags-slate mt-1">{t('pg.sub')}</p></div>
+        <Segmented ariaLabel={t('pg.class')} value={cls} onChange={setCls} options={SARAH_CLASSES.map((c) => ({ value: c, label: clsLabel(c, lang) }))} />
       </div>
-      {legend && !asTable && <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 text-xs text-ags-slate">{legend}</div>}
-      {asTable ? table : children}
-    </section>
-  );
-}
-function LegendItem({ color, hatch, icon: I, label }) {
-  return <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className={cx('w-3 h-3 rounded-sm', hatch && 'hatch')} style={hatch ? undefined : { background: color }} />{I && <I aria-hidden="true" className="w-3.5 h-3.5" />}{label}</span>;
-}
-function DataTable({ head, rows }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead><tr className="text-xs text-ags-slate">{head.map((h, i) => <th key={i} scope="col" className="text-start font-medium py-2 pe-3">{h}</th>)}</tr></thead>
-        <tbody className="divide-y divide-slate-100">{rows.map((r, i) => <tr key={i}>{r.map((c, j) => (j === 0 ? <th key={j} scope="row" className="text-start font-medium py-2 pe-3" dir="auto">{c}</th> : <td key={j} className="py-2 pe-3 tabular">{c}</td>))}</tr>)}</tbody>
-      </table>
+      <section className="card p-5 sm:p-6 mb-5" aria-labelledby="pg-h1">
+        <h2 id="pg-h1" className="text-lg font-bold text-ags-navy">{t('pg.handedIn')}</h2>
+        <p className="hint mb-4">{t('pg.handedIn.hint')}</p>
+        <ul className="space-y-3">
+          {list.map((a) => {
+            const s = classStats(db, a, cls, now); const open = a.dueAt > now;
+            return (
+              <li key={a.id} className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,14rem)_1fr_auto] items-center gap-x-3 gap-y-1">
+                <span className="text-sm text-ags-navy truncate"><bdi>{a.title}</bdi>{open && <span className="ms-1.5 text-[0.68rem] font-bold text-ags-indigo bg-ags-indigo-50 rounded px-1.5">{t('pg.open')}</span>}</span>
+                <span className="col-span-2 sm:col-span-1 order-3 sm:order-none h-4 bg-slate-100 rounded-e overflow-hidden"><span className={cx('block h-full rounded-e transition-all duration-700', open ? 'bg-ags-indigo/60' : 'bg-ags-indigo')} style={{ width: `${s.rate * 100}%` }} /></span>
+                <span className="text-sm tabular text-ags-navy text-end whitespace-nowrap"><b>{fmt.pct(s.rate)}</b> <span className="text-ags-slate">· {t('th.handedIn', { n: s.handedIn, total: s.total })}</span></span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+      <section className="card p-5 sm:p-6" aria-labelledby="pg-h2">
+        <h2 id="pg-h2" className="text-lg font-bold text-ags-navy">{t('pg.help')}</h2>
+        <p className="hint mb-4">{t('pg.help.hint')}</p>
+        {help.length ? (
+          <ul className="divide-y divide-slate-100">
+            {help.map(({ stu, miss, avg }) => (
+              <li key={stu.id} className="py-3 flex flex-wrap items-center gap-3">
+                <Avatar name={stu.en} size="sm" />
+                <span className="flex-1 min-w-[10rem]"><bdi className="block font-medium text-ags-navy">{studentName(stu, lang)}</bdi>
+                  <span className="block text-sm text-ags-slate">{[miss >= 1 && t('pg.missed', { n: miss }), avg != null && avg < 0.5 && t('pg.lowAvg', { pct: fmt.pct(avg) })].filter(Boolean).join(' · ')}</span></span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => actions.remindStudent(stu.id)}><Bell aria-hidden="true" className="w-4 h-4" />{t('pg.remind')}</button>
+              </li>
+            ))}
+          </ul>
+        ) : <EmptyState icon={CheckCircle2} title={t('pg.noHelp')} />}
+      </section>
+      <p className="mt-4 text-sm text-ags-slate flex items-center gap-2"><Lock aria-hidden="true" className="w-4 h-4" />{t('pg.privacy')}</p>
     </div>
   );
 }
 
-function LineChart({ points, label }) {
-  const { fmt, dir } = useApp();
-  const [hover, setHover] = useState(null);
-  const W = 620; const H = 240; const P = { l: 44, r: 28, t: 32, b: 36 };
-  const n = points.length;
-  const xAt = (i) => { const x = n <= 1 ? (W - P.l - P.r) / 2 : (i * (W - P.l - P.r)) / (n - 1); return dir === 'rtl' ? W - P.r - x : P.l + x; };
-  const yAt = (v) => P.t + (1 - v) * (H - P.t - P.b);
-  const path = points.map((p, i) => `${i ? 'L' : 'M'}${xAt(i)} ${yAt(p.v)}`).join(' ');
+/* ---------- set homework: three steps ---------- */
+
+const newQ = (type = 'mcq') => ({ id: uid('q'), type, prompt: '', options: ['', '', '', ''], correct: type === 'tf' ? true : 0 });
+
+function newDraft(now) {
+  return {
+    kind: null, title: '', instructions: '', instrTouched: false, worksheet: true, questions: [], writtenPrompt: '', outOf: 10,
+    classes: [SARAH_CLASSES[0]], due: 'tomorrow', dueDate: toYMD(atDay(3, 19, 0, now)), dueTime: '19:00',
+    acceptLate: true, allowRedo: true, sendLater: false, sendDate: toYMD(atDay(1, 7, 0, now)), sendTime: '07:00', more: false,
+  };
+}
+function draftDue(d, now) {
+  const [h, m] = (d.dueTime || '19:00').split(':').map(Number);
+  if (d.due === 'tomorrow') return atDay(1, h, m, now);
+  if (d.due === '2days') return atDay(2, h, m, now);
+  if (d.due === 'week') return atDay(7, h, m, now);
+  return fromYMDHM(d.dueDate, d.dueTime);
+}
+function draftToAssignment(d, now, t, id = 'preview') {
+  const publishAt = d.sendLater ? fromYMDHM(d.sendDate, d.sendTime) : now;
+  let blocks;
+  if (d.kind === 'quiz') blocks = d.questions.map((q, i) => ({ id: `${id}_b${i + 1}`, type: q.type, prompt: q.prompt.trim(), options: q.type === 'mcq' ? q.options.map((o, j) => o.trim() || `${j + 1}`) : undefined, correct: q.correct, points: 1, required: true }));
+  else if (d.kind === 'written') blocks = [{ id: `${id}_b1`, type: 'long', prompt: d.writtenPrompt.trim() || d.title.trim() || '—', points: d.outOf, required: true }];
+  else blocks = [{ id: `${id}_b1`, type: 'paper', prompt: t('sh.photoPrompt'), points: d.outOf, required: true }];
+  const title = d.title.trim() || '—';
+  return {
+    id, title, instructions: d.instructions.trim(), subject: 'math', teacherId: DEMO_TEACHER, classes: d.classes.length ? d.classes : [SARAH_CLASSES[0]],
+    lang: /[؀-ۿ]/.test(title + d.instructions) ? 'ar' : 'en', blocks, points: sum(blocks.map((b) => b.points)),
+    attachments: d.worksheet && d.kind !== 'quiz' ? [{ id: `${id}_att`, kind: 'worksheet', name: `${title}.pdf` }] : [],
+    publishAt, dueAt: draftDue(d, now), status: publishAt > now ? 'scheduled' : 'published',
+    latePolicy: { mode: d.acceptLate ? 'accept' : 'none', until: null, deduct: false, pct: 0 }, allowResubmit: d.allowRedo, rubric: [], createdAt: now,
+  };
+}
+
+function Step({ n, title, children }) {
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={label}>
-      {[0, 0.25, 0.5, 0.75, 1].map((g) => (
-        <g key={g}>
-          <line x1={dir === 'rtl' ? P.r : P.l} x2={dir === 'rtl' ? W - P.l : W - P.r} y1={yAt(g)} y2={yAt(g)} stroke="#E6E6EF" strokeWidth="1" />
-          <text x={dir === 'rtl' ? W - P.l + 8 : P.l - 8} y={yAt(g) + 4} fontSize="11" fill={BRAND.slate} textAnchor={dir === 'rtl' ? 'start' : 'end'}>{fmt.pct(g)}</text>
-        </g>
-      ))}
-      <path d={path} fill="none" stroke={BRAND.indigo} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      {points.map((p, i) => (
-        <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(i)} onBlur={() => setHover(null)} tabIndex={0} aria-label={`${p.label}: ${fmt.pct(p.v)}`}>
-          <circle cx={xAt(i)} cy={yAt(p.v)} r="14" fill="transparent" />
-          <circle cx={xAt(i)} cy={yAt(p.v)} r={hover === i ? 6.5 : 5} fill={p.open ? '#fff' : BRAND.indigo} stroke={p.open ? BRAND.indigo : '#fff'} strokeWidth="2" />
-          <text x={xAt(i)} y={H - 12} fontSize="11" fill={BRAND.slate} textAnchor="middle">{p.short}</text>
-        </g>
-      ))}
-      {n > 0 && hover == null && <text x={xAt(n - 1)} y={yAt(points[n - 1].v) - 12} fontSize="12" fontWeight="700" fill={BRAND.navy} textAnchor="middle">{fmt.pct(points[n - 1].v)}</text>}
-      {hover != null && (() => {
-        const p = points[hover]; const x = xAt(hover); const y = yAt(p.v); const w = Math.max(120, p.label.length * 6.4 + 20);
-        const bx = clamp(x - w / 2, 4, W - w - 4);
-        return (
-          <g pointerEvents="none">
-            <line x1={x} x2={x} y1={P.t} y2={H - P.b} stroke={BRAND.indigo} strokeOpacity=".25" />
-            <rect x={bx} y={Math.max(2, y - 54)} width={w} height="40" rx="8" fill={BRAND.navy} />
-            <text x={bx + w / 2} y={Math.max(2, y - 54) + 17} fontSize="11" fill="#fff" textAnchor="middle">{p.label}</text>
-            <text x={bx + w / 2} y={Math.max(2, y - 54) + 32} fontSize="12" fontWeight="700" fill={BRAND.gold} textAnchor="middle">{fmt.pct(p.v)}</text>
-          </g>
-        );
-      })()}
-    </svg>
+    <section className="card p-5 sm:p-6 mb-4" aria-labelledby={`step-${n}`}>
+      <h2 id={`step-${n}`} className="font-bold text-ags-navy text-lg flex items-center gap-3 mb-4">
+        <span aria-hidden="true" className="w-8 h-8 rounded-full bg-ags-indigo text-white inline-flex items-center justify-center text-sm">{n}</span>{title}
+      </h2>
+      {children}
+    </section>
   );
 }
 
-function ClassInsights({ cls: clsIn }) {
-  const { t, fmt, lang, now, db, navigate, actions, guide, markGuide } = useApp();
-  const [cls, setCls] = useState(clsIn || '8B');
-  useEffect(() => { if (guide.steps[2]) markGuide(5); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const list = teacherAssignments(db).filter((a) => a.classes.includes(cls) && isPublished(a, now) && now - a.dueAt < 42 * DAY).sort((x, y) => x.dueAt - y.dueAt);
-  const data = list.map((a) => ({ a, s: classStats(db, a, cls, now), open: a.dueAt > now }));
-  const roster = ROSTERS[cls];
-  const support = roster.map((stu) => {
-    let miss = 0; const marks = [];
-    data.forEach(({ a }) => { const sub = db.submissions[subKey(a.id, stu.id)]; const st = teacherStatus(a, sub, now); if (st === 'missing') miss += 1; if (sub && typeof sub.mark === 'number' && ['graded', 'returned', 'revision'].includes(st)) marks.push(sub.mark / a.points); });
-    const avg = marks.length ? sum(marks) / marks.length : null;
-    return { stu, miss, avg, flag: miss >= 3 || (avg != null && avg < 0.5) };
-  }).filter((x) => x.flag);
-  const trend = data.filter((d) => d.s.avg != null).map((d) => ({ v: d.s.avg, label: d.a.title, short: fmt.dateNoWd(d.a.dueAt), open: d.open }));
-  const shortTitle = (a) => (a.title.length > 26 ? `${a.title.slice(0, 25)}…` : a.title);
+function SetHomework() {
+  const { t, fmt, lang, now, builder: d, setBuilder, actions, navigate } = useApp();
+  const [errors, setErrors] = useState({});
+  const [preview, setPreview] = useState(false);
+  const set = (patch) => setBuilder((x) => ({ ...x, ...patch }));
+  const a = useMemo(() => draftToAssignment(d, now, t), [d, now, t]);
+  const kinds = [['photo', Camera], ['quiz', ListChecks], ['written', PenLine]];
+  const choose = (k) => setBuilder((x) => ({ ...x, kind: k, instructions: x.instrTouched ? x.instructions : t(`sh.instr.${k}`), questions: k === 'quiz' && !x.questions.length ? [newQ('mcq')] : x.questions }));
+  const setQ = (qid, patch) => set({ questions: d.questions.map((q) => (q.id === qid ? { ...q, ...patch } : q)) });
+  const validate = () => {
+    const e = {};
+    if (!d.title.trim()) e.title = t('sh.err.title');
+    if (!d.classes.length) e.classes = t('sh.err.class');
+    if (d.kind === 'quiz' && (!d.questions.length || d.questions.some((q) => !q.prompt.trim() || (q.type === 'mcq' && q.options.filter((o) => o.trim()).length < 2)))) e.quiz = t('sh.err.quiz');
+    if (!(a.dueAt > now) || a.dueAt <= a.publishAt) e.due = t('sh.err.due');
+    return e;
+  };
+  const send = () => {
+    const e = validate(); setErrors(e);
+    if (Object.keys(e).length) { setTimeout(() => document.querySelector('[data-err="1"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 30); return; }
+    actions.publish(d);
+    setBuilder(newDraft(now)); setErrors({});
+    navigate({ name: 'home' });
+  };
+  const sendLabel = d.sendLater ? t('sh.schedule', { when: `${fmt.date(a.publishAt)}, ${fmt.time(a.publishAt)}` }) : t('sh.send', { cls: clsList(d.classes.length ? d.classes : [SARAH_CLASSES[0]], lang) });
+  const dueChips = [['tomorrow', 'sh.due.tomorrow'], ['2days', 'sh.due.2days'], ['week', 'sh.due.week'], ['custom', 'sh.due.custom']];
+  const Err = ({ k }) => (errors[k] ? <p data-err="1" role="alert" className="mt-2 text-sm text-rose-700 flex items-center gap-1.5"><AlertCircle aria-hidden="true" className="w-4 h-4" />{errors[k]}</p> : null);
+  return (
+    <div className="max-w-3xl mx-auto">
+      <TeacherTabs />
+      <h1 className="text-3xl font-bold text-ags-navy mb-6">{t('sh.title')}</h1>
+
+      <Step n={1} title={t('sh.step1')}>
+        <div className="grid sm:grid-cols-3 gap-3" role="radiogroup" aria-labelledby="step-1">
+          {kinds.map(([k, I]) => {
+            const on = d.kind === k;
+            return (
+              <button key={k} type="button" role="radio" aria-checked={on} onClick={() => choose(k)}
+                className={cx('rounded-2xl p-4 text-start ring-1 transition flex sm:flex-col gap-3 items-start', on ? 'ring-2 ring-ags-indigo bg-ags-indigo-50' : 'ring-slate-200 hover:ring-ags-indigo bg-white')}>
+                <span className={cx('w-11 h-11 rounded-xl inline-flex items-center justify-center shrink-0', on ? 'bg-ags-indigo text-white' : 'bg-ags-indigo-50 text-ags-indigo')}><I aria-hidden="true" className="w-5 h-5" /></span>
+                <span><span className="block font-bold text-ags-navy">{t(`sh.kind.${k}`)}</span><span className="block text-sm text-ags-slate mt-0.5">{t(`sh.kind.${k}.d`)}</span></span>
+              </button>
+            );
+          })}
+        </div>
+      </Step>
+
+      {d.kind && (
+        <>
+          <Step n={2} title={t('sh.step2')}>
+            <div className="space-y-4">
+              <div>
+                <label className="label" htmlFor="sh-title">{t('sh.fTitle')}</label>
+                <input id="sh-title" className={cx('input text-lg', errors.title && 'input-error')} dir="auto" value={d.title} placeholder={t('sh.fTitlePh')} onChange={(e) => set({ title: e.target.value })} />
+                <Err k="title" />
+              </div>
+              <div>
+                <label className="label" htmlFor="sh-instr">{t('sh.fInstr')}</label>
+                <textarea id="sh-instr" className="input min-h-[5.5rem]" dir="auto" value={d.instructions} onChange={(e) => set({ instructions: e.target.value, instrTouched: true })} />
+              </div>
+              {d.kind === 'written' && (
+                <div><label className="label" htmlFor="sh-q">{t('sh.fQuestion')}</label><input id="sh-q" className="input" dir="auto" value={d.writtenPrompt} placeholder={t('sh.fQuestionPh')} onChange={(e) => set({ writtenPrompt: e.target.value })} /></div>
+              )}
+              {d.kind === 'quiz' && (
+                <div>
+                  <p className="label">{t('sh.questions')}</p>
+                  <ol className="space-y-3">
+                    {d.questions.map((q, i) => (
+                      <li key={q.id} className="rounded-xl ring-1 ring-slate-200 p-4">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="font-bold text-sm text-ags-indigo">{t('q.of', { n: i + 1, total: d.questions.length })}</span>
+                          <Segmented size="sm" ariaLabel={t('sh.qType')} value={q.type} onChange={(v) => setQ(q.id, { type: v, correct: v === 'tf' ? true : 0 })} options={[{ value: 'mcq', label: t('sh.qType.mcq') }, { value: 'tf', label: t('sh.qType.tf') }]} />
+                          <button type="button" className="btn btn-ghost btn-icon ms-auto text-rose-700" onClick={() => set({ questions: d.questions.filter((x) => x.id !== q.id) })} aria-label={`${t('sh.removeQ')} ${i + 1}`}><Trash2 aria-hidden="true" className="w-4 h-4" /></button>
+                        </div>
+                        <input className="input font-medium" dir="auto" value={q.prompt} placeholder={t('sh.qPh')} aria-label={t('q.of', { n: i + 1, total: d.questions.length })} onChange={(e) => setQ(q.id, { prompt: e.target.value })} />
+                        {q.type === 'mcq' ? (
+                          <div className="mt-2 grid sm:grid-cols-2 gap-2">
+                            {q.options.map((o, oi) => (
+                              <label key={oi} className={cx('flex items-center gap-2 rounded-xl ring-1 px-2.5 py-1.5', q.correct === oi ? 'ring-emerald-400 bg-emerald-50' : 'ring-slate-200')}>
+                                <input type="radio" name={`c_${q.id}`} checked={q.correct === oi} onChange={() => setQ(q.id, { correct: oi })} aria-label={`${t('sh.correct')} — ${t('sh.option', { n: oi + 1 })}`} />
+                                <input className="flex-1 bg-transparent outline-none min-h-[2.2rem]" dir="auto" value={o} placeholder={t('sh.option', { n: oi + 1 })} aria-label={t('sh.option', { n: oi + 1 })} onChange={(e) => setQ(q.id, { options: q.options.map((x, j) => (j === oi ? e.target.value : x)) })} />
+                              </label>
+                            ))}
+                            <p className="hint sm:col-span-2">{t('sh.correctHint')}</p>
+                          </div>
+                        ) : (
+                          <div className="mt-2 flex items-center gap-3"><span className="text-sm text-ags-slate">{t('sh.answerIs')}</span><Segmented size="sm" ariaLabel={t('sh.correct')} value={q.correct ? 't' : 'f'} onChange={(v) => setQ(q.id, { correct: v === 't' })} options={[{ value: 't', label: t('q.true') }, { value: 'f', label: t('q.false') }]} /></div>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                  <button type="button" className="btn btn-secondary mt-3" onClick={() => set({ questions: [...d.questions, newQ('mcq')] })}><Plus aria-hidden="true" className="w-4 h-4" />{t('sh.addQ')}</button>
+                  <Err k="quiz" />
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                {d.kind !== 'quiz' && (
+                  <label className="flex items-center gap-2 text-sm text-ags-navy">{t('sh.outOf')}
+                    <select className="input !w-24 !min-h-[2.4rem]" value={d.outOf} onChange={(e) => set({ outOf: Number(e.target.value) })}>{[5, 10, 20].map((n) => <option key={n} value={n}>{fmt.n(n)}</option>)}</select>
+                  </label>
+                )}
+                {d.kind !== 'quiz' && <label className="flex items-center gap-2 text-sm text-ags-navy cursor-pointer"><input type="checkbox" checked={d.worksheet} onChange={(e) => set({ worksheet: e.target.checked })} />{t('sh.worksheet')}</label>}
+                {d.kind === 'quiz' && <p className="text-sm text-ags-slate flex items-center gap-2"><CheckCircle2 aria-hidden="true" className="w-4 h-4 text-emerald-600" />{t('sh.autoMarked')}</p>}
+              </div>
+            </div>
+          </Step>
+
+          <Step n={3} title={t('sh.step3')}>
+            <p className="label" id="sh-cls">{t('sh.classes')}</p>
+            <div role="group" aria-labelledby="sh-cls" className="flex flex-wrap gap-2">
+              {SARAH_CLASSES.map((c) => {
+                const on = d.classes.includes(c);
+                return <button key={c} type="button" aria-pressed={on} onClick={() => set({ classes: on ? d.classes.filter((x) => x !== c) : [...d.classes, c].sort() })} className={cx('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[0.95rem] ring-1 min-h-[2.6rem]', on ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white text-ags-navy ring-slate-300 hover:ring-ags-indigo')}>{on ? <Check aria-hidden="true" className="w-4 h-4" /> : <Plus aria-hidden="true" className="w-4 h-4" />}<bdi>{clsLabel(c, lang)}</bdi></button>;
+              })}
+            </div>
+            <Err k="classes" />
+            <p className="label mt-5" id="sh-due">{t('sh.due')}</p>
+            <div role="radiogroup" aria-labelledby="sh-due" className="flex flex-wrap gap-2">
+              {dueChips.map(([v, k]) => <button key={v} type="button" role="radio" aria-checked={d.due === v} onClick={() => set({ due: v })} className={cx('rounded-full px-4 py-2 text-[0.95rem] ring-1 min-h-[2.6rem]', d.due === v ? 'bg-ags-indigo text-white ring-ags-indigo' : 'bg-white text-ags-navy ring-slate-300 hover:ring-ags-indigo')}>{t(k)}</button>)}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {d.due === 'custom' && <input type="date" className={cx('input !w-auto', errors.due && 'input-error')} aria-label={t('sh.dueDate')} value={d.dueDate} min={toYMD(now)} onChange={(e) => set({ dueDate: e.target.value })} />}
+              <input type="time" className="input !w-auto" aria-label={t('sh.dueTime')} value={d.dueTime} onChange={(e) => set({ dueTime: e.target.value })} />
+              <span className="text-sm text-ags-slate">{fmt.dateLong(a.dueAt)} · {fmt.time(a.dueAt)}</span>
+            </div>
+            <Err k="due" />
+            <div className="mt-5 pt-4 border-t border-slate-100">
+              <button type="button" className="text-sm font-medium text-ags-indigo inline-flex items-center gap-1.5 rounded" aria-expanded={d.more} onClick={() => set({ more: !d.more })}>{t('sh.more')}<ChevronDown aria-hidden="true" className={cx('w-4 h-4 transition-transform', d.more && 'rotate-180')} /></button>
+              {d.more && (
+                <div className="mt-4 space-y-4 ags-fade-up">
+                  <Switch checked={d.acceptLate} onChange={(v) => set({ acceptLate: v })} label={t('sh.acceptLate')} hint={t('sh.acceptLate.hint')} />
+                  <Switch checked={d.allowRedo} onChange={(v) => set({ allowRedo: v })} label={t('sh.allowRedo')} />
+                  <Switch checked={d.sendLater} onChange={(v) => set({ sendLater: v })} label={t('sh.sendLater')} />
+                  {d.sendLater && <div className="flex flex-wrap gap-2"><input type="date" className="input !w-auto" aria-label={t('sh.sendLater')} value={d.sendDate} min={toYMD(now)} onChange={(e) => set({ sendDate: e.target.value })} /><input type="time" className="input !w-auto" aria-label={t('sh.sendLater')} value={d.sendTime} onChange={(e) => set({ sendTime: e.target.value })} /></div>}
+                </div>
+              )}
+            </div>
+          </Step>
+
+          <div className="flex flex-wrap gap-2 justify-end mt-6">
+            <button type="button" className="btn btn-secondary btn-lg" onClick={() => setPreview(true)}><Eye aria-hidden="true" className="w-5 h-5" />{t('sh.preview')}</button>
+            <button type="button" className="btn btn-gold btn-lg" onClick={send}><Send aria-hidden="true" className="w-5 h-5 flip-rtl" />{sendLabel}</button>
+          </div>
+        </>
+      )}
+      <Modal open={preview} onClose={() => setPreview(false)} title={t('sh.preview')} icon={Eye} size="lg" footer={<button type="button" className="btn btn-primary" onClick={() => setPreview(false)}>{t('close')}</button>}>
+        {preview && <StudentPreview a={a} />}
+      </Modal>
+    </div>
+  );
+}
+
+function StudentPreview({ a }) {
+  const { t, fmt, lang, now } = useApp();
+  const [answers, setAnswers] = useState({});
   return (
     <div>
-      <PageHeader title={t('in.title')} subtitle={t('in.subtitle')}
-        actions={<Segmented ariaLabel={t('b.classes')} value={cls} onChange={setCls} options={SARAH_CLASSES.map((c) => ({ value: c, label: clsLabel(c, lang) }))} />} />
-      <p className="mb-5 text-sm text-ags-slate flex items-center gap-2"><Lock aria-hidden="true" className="w-4 h-4" />{t('in.privacy')}</p>
-      <div className="grid xl:grid-cols-2 gap-5">
-        <ChartCard id="ch-comp" title={t('in.completion')} subtitle={clsLabel(cls, lang, true)}
-          table={<DataTable head={[t('in.assignment'), t('in.rate'), t('sub.handedIn')]} rows={data.map((d) => [d.a.title, fmt.pct(d.s.rate), t('td.handedIn', { n: d.s.handedIn, total: d.s.total })])} />}>
-          <ul className="space-y-3">
-            {data.map((d) => (
-              <li key={d.a.id}>
-                <HoverTip label={`${d.a.title}: ${fmt.pct(d.s.rate)}`} tip={`${t('td.handedIn', { n: d.s.handedIn, total: d.s.total })}${d.open ? ` · ${t('in.open')}` : ''}`} className="grid grid-cols-[minmax(0,10rem)_1fr_3rem] sm:grid-cols-[minmax(0,13rem)_1fr_3rem] items-center gap-3 rounded-lg focus-visible:bg-ags-indigo-50">
-                  <span className="text-sm text-ags-navy truncate" dir="auto">{shortTitle(d.a)}{d.open && <span className="ms-1.5 text-[0.65rem] font-bold uppercase text-ags-indigo bg-ags-indigo-50 rounded px-1">{t('in.open')}</span>}</span>
-                  <span className="h-5 bg-slate-100 rounded-e overflow-hidden"><span className={cx('block h-full rounded-e transition-all duration-700', d.open ? 'bg-ags-indigo/60' : 'bg-ags-indigo')} style={{ width: `${d.s.rate * 100}%`, maxWidth: '100%' }} /></span>
-                  <span className="text-sm font-bold tabular text-ags-navy text-end">{fmt.pct(d.s.rate)}</span>
-                </HoverTip>
-              </li>
-            ))}
-          </ul>
-        </ChartCard>
-
-        <ChartCard id="ch-time" title={t('in.timeliness')} subtitle={clsLabel(cls, lang, true)}
-          legend={<><LegendItem color={SERIES.onTime} icon={CheckCircle2} label={t('in.onTime')} /><LegendItem color={SERIES.late} icon={Clock} label={t('in.late')} /><LegendItem color={SERIES.missing} icon={AlertCircle} label={t('in.missing')} /><LegendItem hatch label={t('in.pending')} /></>}
-          table={<DataTable head={[t('in.assignment'), t('in.onTime'), t('in.late'), t('in.missing'), t('in.pending')]} rows={data.map((d) => [d.a.title, fmt.n(d.s.onTime), fmt.n(d.s.lateHanded), fmt.n(d.s.missing), fmt.n(d.s.notYet)])} />}>
-          <ul className="space-y-3">
-            {data.map((d) => {
-              const segs = [['onTime', d.s.onTime], ['late', d.s.lateHanded], ['missing', d.s.missing], ['pending', d.s.notYet]].filter(([, v]) => v > 0);
-              return (
-                <li key={d.a.id}>
-                  <HoverTip label={d.a.title} tip={`${t('in.onTime')} ${fmt.n(d.s.onTime)} · ${t('in.late')} ${fmt.n(d.s.lateHanded)} · ${t('in.missing')} ${fmt.n(d.s.missing)}${d.s.notYet ? ` · ${t('in.pending')} ${fmt.n(d.s.notYet)}` : ''}`} className="grid grid-cols-[minmax(0,10rem)_1fr] sm:grid-cols-[minmax(0,13rem)_1fr] items-center gap-3 rounded-lg">
-                    <span className="text-sm text-ags-navy truncate" dir="auto">{shortTitle(d.a)}</span>
-                    <span className="flex h-5 gap-0.5">
-                      {segs.map(([k, v], i) => (
-                        <span key={k} className={cx('h-full', k === 'pending' && 'hatch', i === 0 && 'rounded-s', i === segs.length - 1 && 'rounded-e')} style={{ width: `${(v / d.s.total) * 100}%`, background: k === 'pending' ? undefined : SERIES[k] }} />
-                      ))}
-                    </span>
-                  </HoverTip>
-                </li>
-              );
-            })}
-          </ul>
-        </ChartCard>
-
-        <ChartCard id="ch-trend" title={t('in.trend')} subtitle={t('in.trend.sub')}
-          table={<DataTable head={[t('in.assignment'), t('in.avgMark')]} rows={trend.map((p) => [p.label, fmt.pct(p.v)])} />}>
-          {trend.length ? <LineChart points={trend} label={t('in.trend')} /> : <EmptyState title={t('in.noMarks')} />}
-        </ChartCard>
-
-        <section className="card p-5" aria-labelledby="sup-h">
-          <SectionTitle id="sup-h" icon={Users} title={t('in.support')} count={support.length} />
-          <p className="text-xs text-ags-slate -mt-2 mb-3">{t('in.support.hint')}</p>
-          {support.length ? (
-            <ul className="space-y-2">
-              {support.map(({ stu, miss, avg }) => (
-                <li key={stu.id} className="flex flex-wrap items-center gap-3 rounded-xl ring-1 ring-slate-200 p-3">
-                  <Avatar name={stu.en} size="sm" />
-                  <span className="flex-1 min-w-[10rem]">
-                    <span className="block font-medium text-ags-navy"><bdi>{studentName(stu, lang)}</bdi></span>
-                    <span className="block text-xs text-ags-slate">{miss >= 1 && t('in.missingCount', { n: miss })}{miss >= 1 && avg != null && ' · '}{avg != null && t('in.avg', { pct: fmt.pct(avg) })}</span>
-                  </span>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => actions.remindStudent(stu.id)}><Bell aria-hidden="true" className="w-4 h-4" />{t('sub.remindOne')}</button>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => { const last = [...data].reverse().find((d) => HANDED_IN.includes(teacherStatus(d.a, db.submissions[subKey(d.a.id, stu.id)], now))); if (last) navigate({ name: 'grade', id: last.a.id, sid: stu.id }); else navigate({ name: 'submissions', id: data[data.length - 1]?.a.id, cls }); }}>{t('in.viewWork')}</button>
-                </li>
-              ))}
-            </ul>
-          ) : <EmptyState icon={CheckCircle2} title={t('in.noSupport')} />}
-        </section>
-      </div>
+      <p className="mb-4 rounded-xl bg-ags-gold-50 ring-1 ring-amber-200 px-4 py-3 text-sm text-ags-navy flex gap-2"><Eye aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0" />{t('sh.previewNote')}</p>
+      <div className="card p-5 mb-4"><SubjectTag code={a.subject} /><h2 className="text-2xl font-bold text-ags-navy mt-1"><bdi>{a.title}</bdi></h2><p className="text-ags-slate mt-1">{teacherName(a.teacherId, lang)} · {dueLabel(t, fmt, a.dueAt, now)}</p></div>
+      {(a.instructions || a.attachments.length > 0) && <div className="card p-5 mb-4"><h3 className="font-bold text-ags-navy mb-2">{t('a.whatToDo')}</h3><p className="text-ags-navy/90 whitespace-pre-wrap" dir="auto">{a.instructions}</p><WorksheetButton a={a} /></div>}
+      <div className="space-y-4">{a.blocks.map((b, i) => <Question key={b.id} a={a} b={b} index={i} total={a.blocks.length} value={answers[b.id]} onChange={(v) => setAnswers((p) => ({ ...p, [b.id]: v }))} preview />)}</div>
     </div>
   );
 }
 
 /* ============================================================================
- * 12. ADMIN OVERVIEW — Head of Middle School (fictional)
- * Grade 8 data comes live from this session; everything else is fixed sample data.
+ * 12. ADMIN — the school-wide picture in one screen
+ * Grade 8B1–8B3 Mathematics and 8B1 update live; everything else is fixed sample data.
  * ========================================================================== */
 
 const SUBJECT_TEACHER = (subject, grade) => {
@@ -4322,249 +2768,155 @@ const SUBJECT_TEACHER = (subject, grade) => {
   if (subject === 'english') return grade === 8 ? 'emily' : 'maha';
   return { science: 'yusuf', arabic: 'mona', islamic: 'abdullah', social: 'hassan', ict: 'adel', art: 'lina' }[subject];
 };
-
 /** Admin weeks are calendar school weeks: the Sunday on or before today. */
 function adminWeekStart(now, off = 0) { const d = new Date(startOfDay(now)); d.setDate(d.getDate() - d.getDay() + off * 7); return d.getTime(); }
 
 function adminEntries(db, now) {
-  const out = [];
-  const rnd = mulberry32(7310);
+  const out = []; const rnd = mulberry32(7310);
   [-1, 0, 1].forEach((w) => {
     const ws = adminWeekStart(now, w);
     ADMIN_CLASSES.forEach((cls, ci) => {
       const { g } = parseCls(cls);
       CORE_SUBJECTS.forEach((subject, si) => {
-        if (subject === 'math' && g === 8) return; // live
-        if (cls === '8B') return; // 8B comes from the session's assignments
+        if (SARAH_CLASSES.includes(cls) && subject === 'math') return; // live
+        if (cls === STUDENT_OMAR.cls) return; // from the session's assignments
         const count = { math: 1, english: 1, science: 1, arabic: 1 }[subject] ?? (rnd() < 0.3 ? 1 : 0);
         for (let k = 0; k < count; k += 1) {
           let day = (ci + si * 2 + w + 5) % 5;
-          if (cls === '7B' && w === 0 && ['math', 'english', 'science', 'arabic'].includes(subject) && k === 0) day = 2; // an overloaded Tuesday
-          const dueAt = ws + day * DAY + 19 * HOUR;
-          const size = 22 + Math.floor(rnd() * 4);
+          if (cls === '7G1' && w === 0 && ['math', 'english', 'science', 'arabic'].includes(subject)) day = 2;
+          const dueAt = ws + day * DAY + 19 * HOUR; const size = 22 + Math.floor(rnd() * 4);
           let handed; let late = 0;
           if (dueAt < now) { const on = 0.72 + rnd() * 0.2; const lt = 0.03 + rnd() * 0.07; handed = Math.min(size, Math.round(size * (on + lt))); late = Math.round(size * lt); }
           else handed = Math.round(size * rnd() * 0.4);
-          out.push({ cls, grade: g, subject, teacherId: SUBJECT_TEACHER(subject, g), dueAt, size, handed, late, missing: dueAt < now ? size - handed : 0 });
+          out.push({ cls, grade: g, subject, dueAt, size, handed, late });
         }
       });
     });
   });
-  // Grade 8B, all subjects, from the session's real assignments.
-  Object.values(db.assignments).filter((a) => a.classes.includes('8B') && isPublished(a, now) && a.teacherId !== 'sarah').forEach((a) => {
-    const r = mulberry32(hashStr(a.id)); const size = ROSTERS['8B'].length;
-    const past = a.dueAt < now;
-    const handed = past ? Math.round(size * (0.8 + r() * 0.15)) : Math.round(size * r() * 0.4);
-    out.push({ cls: '8B', grade: 8, subject: a.subject, teacherId: a.teacherId, dueAt: a.dueAt, size, handed, late: past ? Math.round(size * 0.05) : 0, missing: past ? size - handed : 0 });
+  Object.values(db.assignments).filter((a) => a.classes.includes(STUDENT_OMAR.cls) && isPublished(a, now) && a.teacherId !== DEMO_TEACHER).forEach((a) => {
+    const r = mulberry32(hashStr(a.id)); const size = ROSTERS[STUDENT_OMAR.cls].length; const past = a.dueAt < now;
+    out.push({ cls: STUDENT_OMAR.cls, grade: 8, subject: a.subject, dueAt: a.dueAt, size, handed: past ? Math.round(size * (0.8 + r() * 0.15)) : Math.round(size * r() * 0.4), late: past ? 1 : 0 });
   });
-  // Grade 8 Mathematics, live.
   teacherAssignments(db).filter((a) => isPublished(a, now)).forEach((a) => a.classes.forEach((cls) => {
     const s = classStats(db, a, cls, now);
-    out.push({ cls, grade: 8, subject: 'math', teacherId: 'sarah', dueAt: a.dueAt, size: s.total, handed: s.handedIn, late: s.lateHanded, missing: s.missing, live: true, aid: a.id });
+    out.push({ cls, grade: 8, subject: 'math', dueAt: a.dueAt, size: s.total, handed: s.handedIn, late: s.lateHanded, live: true });
   }));
   return out;
 }
 
-const STATIC_BACKLOG = [
-  { id: 'emily', grades: [8], toGrade: 14, turn: 2.1 }, { id: 'yusuf', grades: [7, 8], toGrade: 6, turn: 1.4 }, { id: 'mona', grades: [6, 7, 8], toGrade: 9, turn: 1.9 },
-  { id: 'abdullah', grades: [6, 7, 8], toGrade: 3, turn: 1.2 }, { id: 'hassan', grades: [6, 7, 8], toGrade: 11, turn: 3.4 }, { id: 'adel', grades: [6, 7, 8], toGrade: 4, turn: 1.6 },
-  { id: 'lina', grades: [6, 7, 8], toGrade: 2, turn: 2.8 }, { id: 'farouk', grades: [6, 7], toGrade: 17, turn: 3.1 }, { id: 'maha', grades: [6, 7], toGrade: 5, turn: 1.5 },
-];
+const STATIC_BACKLOG = 71; // other teachers' work waiting to be marked (sample)
 const STATIC_FOLLOWUP = [
-  { key: 'fu_rakan', en: 'Rakan Al-Dosari', ar: 'راكان الدوسري', cls: '7A', missing: 4, subjects: ['science', 'english', 'arabic', 'ict'] },
-  { key: 'fu_mazen', en: 'Mazen Khan', ar: 'مازن خان', cls: '6C', missing: 3, subjects: ['math', 'social', 'art'] },
-  { key: 'fu_talal', en: 'Talal Al-Yami', ar: 'طلال اليامي', cls: '7C', missing: 3, subjects: ['english', 'islamic', 'math'] },
+  { key: 'fu_rahaf', en: 'Rahaf Al-Dosari', ar: 'رهف الدوسري', cls: '7G1', missing: 4, subjects: ['science', 'english', 'arabic', 'ict'] },
+  { key: 'fu_mazen', en: 'Mazen Khan', ar: 'مازن خان', cls: '6B2', missing: 3, subjects: ['math', 'social', 'art'] },
+  { key: 'fu_talal', en: 'Talal Al-Yami', ar: 'طلال اليامي', cls: '7B2', missing: 3, subjects: ['english', 'islamic', 'math'] },
 ];
 
 function AdminOverview() {
   const { t, fmt, lang, now, db, actions, guide, markGuide } = useApp();
-  const [grade, setGrade] = useState('all');
-  const [subject, setSubject] = useState('all');
   const [week, setWeek] = useState(0);
   useEffect(() => { if (guide.steps[2]) markGuide(6); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const entries = useMemo(() => adminEntries(db, now), [db, now]);
   const ws = adminWeekStart(now, week); const we = ws + 7 * DAY;
   const inWeek = entries.filter((e) => e.dueAt >= ws && e.dueAt < we);
-  const gOk = (e) => grade === 'all' || e.grade === Number(grade);
-  const sOk = (e) => subject === 'all' || e.subject === subject;
-  const sel = inWeek.filter((e) => gOk(e) && sOk(e));
-  // Completion counts only work whose deadline has passed — not-yet-due work isn't "missing".
-  const rate = (xs) => { const due = xs.filter((e) => e.dueAt <= now); return sum(due.map((e) => e.size)) ? sum(due.map((e) => e.handed)) / sum(due.map((e) => e.size)) : null; };
-  const pctOr = (v) => (v == null ? '—' : fmt.pct(v));
-  const outstanding = sum(sel.map((e) => e.size - e.handed));
-  const lateCount = sum(sel.map((e) => e.late));
-  const noneDue = rate(sel) == null;
-
-  // grading backlog
-  const sarahRows = teacherAssignments(db).filter((a) => isPublished(a, now));
-  const sarahToGrade = sum(sarahRows.flatMap((a) => a.classes.map((c) => classStats(db, a, c, now).toGrade)));
-  const turns = Object.values(db.submissions).filter((s) => db.assignments[s.assignmentId]?.teacherId === 'sarah' && s.returnedAt && s.submittedAt && now - s.returnedAt < 30 * DAY).map((s) => (s.returnedAt - s.submittedAt) / DAY);
-  const backlog = [{ id: 'sarah', grades: [8], toGrade: sarahToGrade, turn: turns.length ? round1(sum(turns) / turns.length) : 0, live: true }, ...STATIC_BACKLOG]
-    .filter((b) => (grade === 'all' || b.grades.includes(Number(grade))) && (subject === 'all' || TEACHERS[b.id].subject === subject))
-    .sort((x, y) => y.toGrade - x.toGrade);
-  const totalBacklog = sum(backlog.map((b) => b.toGrade));
-  const avgTurn = backlog.length ? round1(sum(backlog.map((b) => b.turn)) / backlog.length) : 0;
-
-  // follow-up
+  const rate = (xs) => { const due = xs.filter((e) => e.dueAt <= now); const s = sum(due.map((e) => e.size)); return s ? sum(due.map((e) => e.handed)) / s : null; };
+  const overall = rate(inWeek);
+  const toMark = STATIC_BACKLOG + teacherAssignments(db).filter((a) => isPublished(a, now)).reduce((n, a) => n + sum(a.classes.map((c) => classStats(db, a, c, now).toGrade)), 0);
   const live = [];
-  SARAH_CLASSES.forEach((cls) => ROSTERS[cls].forEach((stu) => {
-    const miss = sarahRows.filter((a) => a.classes.includes(cls) && now - a.dueAt < 42 * DAY && teacherStatus(a, db.submissions[subKey(a.id, stu.id)], now) === 'missing').length;
-    if (miss >= 3) live.push({ key: `fu_${stu.id}`, en: stu.en, ar: stu.ar, cls, missing: miss, subjects: ['math'] });
-  }));
-  const followUp = [...live, ...STATIC_FOLLOWUP].filter((f) => (grade === 'all' || parseCls(f.cls).g === Number(grade)) && (subject === 'all' || f.subjects.includes(subject)));
-
-  // load heatmap (all subjects)
-  const loadClasses = ADMIN_CLASSES.filter((c) => grade === 'all' || parseCls(c).g === Number(grade));
+  SARAH_CLASSES.forEach((cls) => supportList(db, cls, now).filter((x) => x.miss >= 3).forEach((x) => live.push({ key: `fu_${x.stu.id}`, en: x.stu.en, ar: x.stu.ar, cls, missing: x.miss, subjects: ['math'] })));
+  const followUp = [...live, ...STATIC_FOLLOWUP];
   const days = [0, 1, 2, 3, 4].map((i) => ws + i * DAY + 12 * HOUR);
   const load = (cls, d) => inWeek.filter((e) => e.cls === cls && toYMD(e.dueAt) === toYMD(d)).length;
-  const flags = loadClasses.flatMap((c) => days.map((d) => ({ c, d, n: load(c, d) }))).filter((x) => x.n >= 3);
-
-  // activity feed (live)
+  const flags = ADMIN_CLASSES.flatMap((c) => days.map((d) => ({ c, d, n: load(c, d) }))).filter((x) => x.n >= 3);
   const events = [];
   Object.values(db.submissions).forEach((s) => {
     const a = db.assignments[s.assignmentId]; const stu = STUDENTS[s.studentId];
-    if (!a || !stu || !a.classes.some((c) => ADMIN_CLASSES.includes(c))) return;
-    if (s.submittedAt && ['submitted', 'graded', 'returned', 'revision'].includes(s.status) && now - s.submittedAt < 3 * DAY) events.push({ at: s.submittedAt, icon: Send, text: t('ad.act.submitted', { name: studentName(stu, lang), title: a.title }), meta: `${clsLabel(stu.cls, lang)} · ${subjName(a.subject, lang)}` });
-    if (s.returnedAt && ['returned', 'revision'].includes(s.status) && now - s.returnedAt < 3 * DAY) events.push({ at: s.returnedAt, icon: CheckCircle2, text: t('ad.act.returned', { name: studentName(stu, lang), title: a.title }), meta: `${teacherName(a.teacherId, lang)} · ${clsLabel(stu.cls, lang)}` });
+    if (!a || !stu || !ADMIN_CLASSES.includes(stu.cls)) return;
+    if (s.submittedAt && s.status !== 'draft' && now - s.submittedAt < 3 * DAY) events.push({ at: s.submittedAt, icon: Send, text: t('ad.act.in', { name: studentName(stu, lang), title: a.title }), meta: `${clsLabel(stu.cls, lang)} · ${subjName(a.subject, lang)}` });
+    if (s.returnedAt && ['returned', 'revision'].includes(s.status) && now - s.returnedAt < 3 * DAY) events.push({ at: s.returnedAt, icon: CheckCircle2, text: t('ad.act.back', { name: studentName(stu, lang), title: a.title }), meta: teacherName(a.teacherId, lang) });
   });
-  Object.values(db.assignments).forEach((a) => { if (isPublished(a, now) && now - a.publishAt < 4 * DAY && a.classes.some((c) => ADMIN_CLASSES.includes(c))) events.push({ at: a.publishAt, icon: ClipboardList, text: t('ad.act.published', { title: a.title, cls: clsList(a.classes, lang) }), meta: teacherName(a.teacherId, lang) }); });
+  Object.values(db.assignments).forEach((a) => { if (isPublished(a, now) && now - a.publishAt < 4 * DAY && a.classes.some((c) => ADMIN_CLASSES.includes(c))) events.push({ at: a.publishAt, icon: ClipboardList, text: t('ad.act.set', { title: a.title, cls: clsList(a.classes, lang) }), meta: teacherName(a.teacherId, lang) }); });
   events.sort((x, y) => y.at - x.at);
-
-  const Bars = ({ rows, id }) => (
-    <ul className="space-y-2.5" aria-labelledby={id}>
-      {rows.map((r) => (
-        <li key={r.key}>
-          <HoverTip label={`${r.label}: ${fmt.pct(r.v)}`} tip={r.tip} className="grid grid-cols-[minmax(0,9rem)_1fr_3rem] items-center gap-3 rounded-lg">
-            <span className="text-sm text-ags-navy truncate flex items-center gap-1.5">{r.dot && <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0" style={{ background: r.dot }} />}{r.label}</span>
-            <span className="h-5 bg-slate-100 rounded-e overflow-hidden"><span className="block h-full bg-ags-indigo rounded-e transition-all duration-700" style={{ width: `${r.v * 100}%` }} /></span>
-            <span className="text-sm font-bold tabular text-end">{r.n ? fmt.pct(r.v) : '—'}</span>
-          </HoverTip>
-        </li>
-      ))}
-    </ul>
-  );
-    const row = (key, label, xs, dot) => { const v = rate(xs); const due = xs.filter((e) => e.dueAt <= now); return { key, label, dot, v: v ?? 0, n: v == null ? 0 : due.length, tip: t('ad.tipHanded', { n: sum(due.map((e) => e.handed)), total: sum(due.map((e) => e.size)) }) }; };
-  const gradeRows = [6, 7, 8].filter((g) => grade === 'all' || g === Number(grade)).map((g) => row(g, t('ad.gradeN', { g }), inWeek.filter((e) => e.grade === g && sOk(e))));
-  const subjRows = CORE_SUBJECTS.filter((s) => subject === 'all' || s === subject).map((s) => row(s, subjName(s, lang), inWeek.filter((e) => e.subject === s && gOk(e)), SUBJECTS[s].color));
-  const cellTone = (n) => (n >= 3 ? 'bg-amber-100 ring-2 ring-amber-400 text-amber-950 font-bold' : n === 2 ? 'bg-ags-indigo-100 text-ags-navy' : n === 1 ? 'bg-ags-indigo-50 text-ags-navy' : 'bg-slate-50 text-slate-400');
-
+  const cell = (n) => (n >= 3 ? 'bg-amber-100 ring-2 ring-amber-400 text-amber-950 font-bold' : n === 2 ? 'bg-ags-indigo-100 text-ags-navy' : n === 1 ? 'bg-ags-indigo-50 text-ags-navy' : 'bg-slate-50 text-slate-400');
   return (
-    <div>
-      <PageHeader title={t('ad.title')} subtitle={t('ad.subtitle')} eyebrow={<span className="text-xs font-medium text-ags-indigo">{t('ad.user')}</span>} />
-      <div className="card p-4 mb-5 flex flex-wrap items-end gap-4">
-        <div><label className="label" htmlFor="ad-g">{t('ad.grade')}</label>
-          <select id="ad-g" className="input !w-44" value={grade} onChange={(e) => setGrade(e.target.value)}><option value="all">{t('ad.allGrades')}</option>{[6, 7, 8].map((g) => <option key={g} value={g}>{t('ad.gradeN', { g })}</option>)}</select></div>
-        <div><label className="label" htmlFor="ad-s">{t('ad.subject')}</label>
-          <select id="ad-s" className="input !w-52" value={subject} onChange={(e) => setSubject(e.target.value)}><option value="all">{t('filter.all')}</option>{CORE_SUBJECTS.map((s) => <option key={s} value={s}>{subjName(s, lang)}</option>)}</select></div>
-        <div><p className="label">{t('ad.week')}</p>
-          <Segmented ariaLabel={t('ad.week')} value={week} onChange={setWeek} options={[{ value: -1, label: t('ad.wk.prev') }, { value: 0, label: t('ad.wk.this') }, { value: 1, label: t('ad.wk.next') }]} /></div>
-        <p className="text-xs text-ags-slate ms-auto self-center">{fmt.dateNoWd(ws)} – {fmt.dateNoWd(ws + 4 * DAY)}</p>
+    <div className="max-w-5xl mx-auto">
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div><p className="text-sm font-medium text-ags-indigo">{t('ad.user')}</p><h1 className="text-3xl font-bold text-ags-navy">{t('ad.title')}</h1><p className="text-ags-slate mt-1">{t('ad.sub')}</p></div>
+        <Segmented ariaLabel={t('ad.week')} value={week} onChange={setWeek} options={[{ value: -1, label: t('ad.wk.prev') }, { value: 0, label: t('ad.wk.this') }, { value: 1, label: t('ad.wk.next') }]} />
       </div>
-      <p className="mb-5 text-xs text-ags-slate flex gap-2 items-start"><Info aria-hidden="true" className="w-4 h-4 shrink-0" />{t('ad.liveNote')}</p>
-
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-        <StatCard size="sm" icon={TrendingUp} tone="green" value={pctOr(rate(sel))} label={t('ad.kpi.completion')} hint={rate(sel) == null ? t('ad.noneDue') : t('ad.kpi.completion.hint')} />
-        <StatCard size="sm" icon={Inbox} tone="indigo" value={fmt.n(outstanding)} label={t('ad.kpi.outstanding')} />
-        <StatCard size="sm" icon={Clock} tone="amber" value={fmt.n(lateCount)} label={t('ad.kpi.late')} />
-        <StatCard size="sm" icon={ClipboardList} tone="gold" value={fmt.n(totalBacklog)} label={t('ad.kpi.backlog')} />
-        <StatCard size="sm" icon={CalendarClock} tone="grey" value={t('days', { n: avgTurn })} label={t('ad.kpi.turnaround')} />
+      <div className="grid sm:grid-cols-3 gap-4 mb-6">
+        <StatCard size="lg" icon={TrendingUp} tone="green" value={overall == null ? '—' : fmt.pct(overall)} label={t('ad.k.handedIn')} hint={overall == null ? t('ad.noneDue') : undefined} />
+        <StatCard size="lg" icon={Inbox} tone="gold" value={fmt.n(toMark)} label={t('ad.k.toMark')} />
+        <StatCard size="lg" icon={Users} tone="amber" value={fmt.n(followUp.length)} label={t('ad.k.followUp')} />
       </div>
 
-      <div className="grid xl:grid-cols-2 gap-5">
-        <ChartCard id="ad-byg" title={t('ad.byGrade')} subtitle={t('ad.soFar')} table={<DataTable head={[t('ad.grade'), t('in.rate')]} rows={gradeRows.map((r) => [r.label, r.n ? fmt.pct(r.v) : '—'])} />}>
-          {noneDue ? <EmptyState icon={CalendarClock} title={t('ad.noneDue')} /> : <Bars rows={gradeRows} id="ad-byg" />}
-        </ChartCard>
-        <ChartCard id="ad-bys" title={t('ad.bySubject')} subtitle={t('ad.soFar')} table={<DataTable head={[t('ad.subject'), t('in.rate')]} rows={subjRows.map((r) => [r.label, r.n ? fmt.pct(r.v) : '—'])} />}>
-          {noneDue ? <EmptyState icon={CalendarClock} title={t('ad.noneDue')} /> : <Bars rows={subjRows} id="ad-bys" />}
-        </ChartCard>
-
-        <section className="card p-5 xl:col-span-2" aria-labelledby="ad-load">
-          <SectionTitle id="ad-load" icon={CalendarDays} title={t('ad.load')} />
-          <p className="text-xs text-ags-slate -mt-2 mb-4">{t('ad.load.hint')}</p>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[34rem] border-separate" style={{ borderSpacing: '4px' }}>
-              <caption className="sr-only">{t('ad.load')}</caption>
-              <thead><tr><th scope="col" className="text-start text-xs font-medium text-ags-slate px-2">{t('ad.class')}</th>{days.map((d) => <th key={d} scope="col" className="text-xs font-medium text-ags-slate">{fmt.weekdayShort(d)} <span className="tabular">{fmt.dayNum(d)}</span></th>)}</tr></thead>
-              <tbody>
-                {loadClasses.map((c) => (
-                  <tr key={c}>
-                    <th scope="row" className="text-start text-sm font-medium text-ags-navy px-2 whitespace-nowrap">{clsLabel(c, lang)}</th>
-                    {days.map((d) => {
-                      const n = load(c, d);
-                      return (
-                        <td key={d} className={cx('h-11 rounded-lg text-center text-sm tabular', cellTone(n))} aria-label={`${clsLabel(c, lang)} · ${fmt.weekday(d)}: ${t('week.count', { n })}${n >= 3 ? ` · ${t('ad.heavy')}` : ''}`}>
-                          <span className="inline-flex items-center gap-1">{n >= 3 && <AlertTriangle aria-hidden="true" className="w-3.5 h-3.5" />}{n ? fmt.n(n) : '·'}</span>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {flags.length ? flags.map((f) => (
-              <span key={f.c + f.d} className="inline-flex items-center gap-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 text-sm text-amber-950"><AlertTriangle aria-hidden="true" className="w-4 h-4 text-amber-700" />{t('ad.load.flag', { cls: clsLabel(f.c, lang), n: f.n, day: fmt.weekday(f.d) })}</span>
-            )) : <span className="text-sm text-ags-slate flex items-center gap-2"><CheckCircle2 aria-hidden="true" className="w-4 h-4 text-emerald-600" />{t('ad.load.none')}</span>}
-          </div>
-        </section>
-
-        <section className="card p-5" aria-labelledby="ad-back">
-          <SectionTitle id="ad-back" icon={ClipboardList} title={t('ad.backlog')} />
-          <table className="w-full text-sm">
-            <caption className="sr-only">{t('ad.backlog')}</caption>
-            <thead><tr className="text-xs text-ags-slate"><th scope="col" className="text-start font-medium pb-2">{t('ad.teacher')}</th><th scope="col" className="text-end font-medium pb-2">{t('ad.toGrade')}</th><th scope="col" className="text-end font-medium pb-2">{t('ad.turn')}</th></tr></thead>
-            <tbody className="divide-y divide-slate-100">
-              {backlog.map((b) => (
-                <tr key={b.id}>
-                  <th scope="row" className="text-start font-medium py-2.5">
-                    <span className="flex items-center gap-2"><span>{teacherName(b.id, lang)}</span>{b.live && <span className="text-[0.65rem] font-bold rounded bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 px-1.5">{t('ad.live')}</span>}</span>
-                    <span className="block text-xs text-ags-slate font-normal">{subjName(TEACHERS[b.id].subject, lang)}</span>
-                  </th>
-                  <td className="text-end tabular py-2.5"><span className={cx('inline-block min-w-[2rem] rounded-full px-2 py-0.5 font-bold', b.toGrade >= 15 ? 'bg-amber-100 text-amber-950' : 'bg-slate-100 text-ags-navy')}>{fmt.n(b.toGrade)}</span></td>
-                  <td className={cx('text-end tabular py-2.5', b.turn >= 3 && 'text-amber-800 font-medium')}>{t('days', { n: b.turn })}</td>
+      <section className="card p-5 sm:p-6 mb-5" aria-labelledby="ad-load">
+        <h2 id="ad-load" className="text-lg font-bold text-ags-navy">{t('ad.load')}</h2>
+        <p className="hint mb-4">{t('ad.load.hint')}</p>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[30rem] border-separate" style={{ borderSpacing: '4px' }}>
+            <caption className="sr-only">{t('ad.load')}</caption>
+            <thead><tr><th scope="col" className="text-start text-xs font-medium text-ags-slate px-2">{t('ad.class')}</th>{days.map((d) => <th key={d} scope="col" className="text-xs font-medium text-ags-slate">{fmt.weekdayShort(d)} <span className="tabular">{fmt.dayNum(d)}</span></th>)}</tr></thead>
+            <tbody>
+              {ADMIN_CLASSES.map((c) => (
+                <tr key={c}>
+                  <th scope="row" className="text-start text-sm font-medium text-ags-navy px-2 whitespace-nowrap"><bdi>{clsLabel(c, lang)}</bdi></th>
+                  {days.map((d) => { const n = load(c, d); return <td key={d} className={cx('h-10 rounded-lg text-center text-sm tabular', cell(n))} aria-label={`${clsLabel(c, lang)} · ${fmt.weekday(d)}: ${fmt.n(n)}`}><span className="inline-flex items-center gap-1">{n >= 3 && <AlertTriangle aria-hidden="true" className="w-3.5 h-3.5" />}{n ? fmt.n(n) : '·'}</span></td>; })}
                 </tr>
               ))}
             </tbody>
           </table>
-        </section>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {flags.length ? flags.map((f) => <span key={f.c + f.d} className="inline-flex items-center gap-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 text-sm text-amber-950"><AlertTriangle aria-hidden="true" className="w-4 h-4 text-amber-700" />{t('ad.load.flag', { cls: `⁨${clsLabel(f.c, lang)}⁩`, n: f.n, day: fmt.weekday(f.d) })}</span>)
+            : <span className="text-sm text-ags-slate flex items-center gap-2"><CheckCircle2 aria-hidden="true" className="w-4 h-4 text-emerald-600" />{t('ad.load.none')}</span>}
+        </div>
+      </section>
 
-        <section className="card p-5" aria-labelledby="ad-fu">
-          <SectionTitle id="ad-fu" icon={Users} title={t('ad.followUp')} count={followUp.length} />
-          <p className="text-xs text-ags-slate -mt-2 mb-3">{t('ad.followUp.hint')}</p>
-          <ul className="space-y-2">
+      <div className="grid lg:grid-cols-2 gap-5">
+        <section className="card p-5 sm:p-6" aria-labelledby="ad-g">
+          <h2 id="ad-g" className="text-lg font-bold text-ags-navy">{t('ad.byGrade')}</h2>
+          <p className="hint mb-4">{t('ad.byGrade.hint')}</p>
+          {overall == null ? <EmptyState icon={CalendarClock} title={t('ad.noneDue')} /> : (
+            <ul className="space-y-3">
+              {[6, 7, 8].map((g) => { const v = rate(inWeek.filter((e) => e.grade === g)); return (
+                <li key={g} className="grid grid-cols-[5.5rem_1fr_3rem] items-center gap-3">
+                  <span className="text-sm text-ags-navy">{t('ad.gradeN', { g })}</span>
+                  <span className="h-5 bg-slate-100 rounded-e overflow-hidden"><span className="block h-full bg-ags-indigo rounded-e transition-all duration-700" style={{ width: `${(v || 0) * 100}%` }} /></span>
+                  <span className="text-sm font-bold tabular text-end">{v == null ? '—' : fmt.pct(v)}</span>
+                </li>
+              ); })}
+            </ul>
+          )}
+        </section>
+        <section className="card p-5 sm:p-6" aria-labelledby="ad-fu">
+          <h2 id="ad-fu" className="text-lg font-bold text-ags-navy">{t('ad.followUp')}</h2>
+          <p className="hint mb-3">{t('ad.followUp.hint')}</p>
+          <ul className="divide-y divide-slate-100">
             {followUp.map((f) => (
-              <li key={f.key} className="flex flex-wrap items-center gap-3 rounded-xl ring-1 ring-slate-200 p-3">
+              <li key={f.key} className="py-2.5 flex flex-wrap items-center gap-3">
                 <Avatar name={f.en} size="sm" />
-                <span className="flex-1 min-w-[10rem]">
-                  <span className="block font-medium text-ags-navy"><bdi>{lang === 'ar' ? f.ar : f.en}</bdi> <span className="text-xs text-ags-slate font-normal">· {clsLabel(f.cls, lang)}</span></span>
-                  <span className="block text-xs text-ags-slate">{t('in.missingCount', { n: f.missing })} · {f.subjects.map((s) => subjName(s, lang)).join(lang === 'ar' ? '، ' : ', ')}</span>
-                </span>
-                {db.notified[f.key]
-                  ? <span className="text-sm text-emerald-800 inline-flex items-center gap-1.5"><CheckCircle2 aria-hidden="true" className="w-4 h-4" />{t('ad.notified')}</span>
+                <span className="flex-1 min-w-[9rem]"><bdi className="block font-medium text-ags-navy">{lang === 'ar' ? f.ar : f.en}</bdi><span className="block text-xs text-ags-slate"><bdi>{clsLabel(f.cls, lang)}</bdi> · {t('ad.missed', { n: f.missing })}</span></span>
+                {db.notified[f.key] ? <span className="text-sm text-emerald-800 inline-flex items-center gap-1.5"><CheckCircle2 aria-hidden="true" className="w-4 h-4" />{t('ad.notified')}</span>
                   : <button type="button" className="btn btn-secondary btn-sm" onClick={() => actions.notifyHomeroom(f.key, f.cls)}><Bell aria-hidden="true" className="w-4 h-4" />{t('ad.notify')}</button>}
               </li>
             ))}
-            {!followUp.length && <EmptyState icon={CheckCircle2} title={t('ad.followUp.none')} />}
-          </ul>
-        </section>
-
-        <section className="card p-5 xl:col-span-2" aria-labelledby="ad-act">
-          <SectionTitle id="ad-act" icon={Sparkles} title={t('ad.activity')} right={<span className="text-[0.7rem] font-bold rounded bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 px-1.5 py-0.5">{t('ad.live')}</span>} />
-          <ul className="divide-y divide-slate-100">
-            {events.slice(0, 8).map((e, i) => {
-              const I = e.icon;
-              return (
-                <li key={i} className={cx('py-2.5 flex items-center gap-3', i === 0 && now - e.at < 10 * MIN && 'bg-ags-gold-50 -mx-2 px-2 rounded-lg')}>
-                  <span className="w-8 h-8 rounded-lg bg-ags-indigo-50 text-ags-indigo inline-flex items-center justify-center shrink-0"><I aria-hidden="true" className="w-4 h-4 flip-rtl" /></span>
-                  <span className="flex-1 min-w-0"><span className="block text-sm text-ags-navy" dir="auto">{e.text}</span><span className="block text-xs text-ags-slate">{e.meta}</span></span>
-                  <span className="text-xs text-ags-slate whitespace-nowrap">{agoLabel(t, e.at, now)}</span>
-                </li>
-              );
-            })}
           </ul>
         </section>
       </div>
+
+      <section className="card p-5 sm:p-6 mt-5" aria-labelledby="ad-act">
+        <h2 id="ad-act" className="text-lg font-bold text-ags-navy flex items-center gap-2">{t('ad.latest')}<span className="text-[0.7rem] font-bold rounded bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 px-1.5 py-0.5">{t('ad.live')}</span></h2>
+        <ul className="divide-y divide-slate-100 mt-2">
+          {events.slice(0, 5).map((e, i) => { const I = e.icon; return (
+            <li key={i} className={cx('py-2.5 flex items-center gap-3', i === 0 && now - e.at < 10 * MIN && 'bg-ags-gold-50 -mx-2 px-2 rounded-lg')}>
+              <span className="w-8 h-8 rounded-lg bg-ags-indigo-50 text-ags-indigo inline-flex items-center justify-center shrink-0"><I aria-hidden="true" className="w-4 h-4 flip-rtl" /></span>
+              <span className="flex-1 min-w-0"><span className="block text-sm text-ags-navy">{e.text}</span><span className="block text-xs text-ags-slate">{e.meta}</span></span>
+              <span className="text-xs text-ags-slate whitespace-nowrap">{agoLabel(t, e.at, now)}</span>
+            </li>
+          ); })}
+        </ul>
+      </section>
+      <p className="mt-4 text-xs text-ags-slate flex gap-2"><Info aria-hidden="true" className="w-4 h-4 shrink-0" />{t('ad.liveNote')}</p>
     </div>
   );
 }
@@ -4585,13 +2937,12 @@ export default function App() {
   const [now, setNow] = useState(() => Date.now());
   const [toasts, setToasts] = useState([]);
   const [settings, setSettings] = useState({ textSize: 'm', reduceMotion: false });
-  const [guide, setGuide] = useState(() => ({ open: typeof window === 'undefined' || window.innerWidth >= 1024, aid: null, steps: {} }));
+  const [guide, setGuide] = useState(() => ({ open: typeof window !== 'undefined' && window.innerWidth >= 1680, aid: null, steps: {} }));
   const [builder, setBuilder] = useState(() => newDraft(Date.now()));
   const [modal, setModal] = useState(null);
   const [loading, setLoading] = useState(true);
   const dbRef = useRef(db); dbRef.current = db;
   const guideRef = useRef(guide); guideRef.current = guide;
-
   const i18n = useMemo(() => makeI18n(lang), [lang]);
   const { t, fmt, dir } = i18n;
   const student = STAGE_STUDENT[stage];
@@ -4600,7 +2951,7 @@ export default function App() {
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(id); }, []);
   useEffect(() => { document.documentElement.lang = lang; document.documentElement.dir = dir; document.title = lang === 'ar' ? 'منصة الواجبات — AGS (نسخة تجريبية)' : 'AGS Homework Hub — Demo'; }, [lang, dir]);
   useEffect(() => { document.documentElement.style.fontSize = TEXT_SIZES[settings.textSize] || '100%'; }, [settings.textSize]);
-  const viewKey = `${role}|${stage}|${route.name}|${route.id || ''}|${route.sid || ''}|${route.cls || ''}|${route.blockId || ''}`;
+  const viewKey = `${role}|${stage}|${route.name}|${route.id || ''}|${route.sid || ''}|${route.cls || ''}`;
   useEffect(() => {
     setLoading(true); setNow(Date.now()); window.scrollTo({ top: 0 });
     const id = setTimeout(() => setLoading(false), 300);
@@ -4612,7 +2963,6 @@ export default function App() {
     setToasts((ts) => [...ts.slice(-2), { id, msg, ...opts }]);
     setTimeout(() => setToasts((ts) => ts.filter((x) => x.id !== id)), opts.action ? 7000 : 4500);
   }, []);
-  const dismissToast = (id) => setToasts((ts) => ts.filter((x) => x.id !== id));
   const navigate = useCallback((r) => setRoutes((rs) => ({ ...rs, [role]: r })), [role]);
   const go = useCallback((r, rt, st) => { if (st) setStageRaw(st); setRole(r); setRoutes((rs) => ({ ...rs, [r]: rt })); }, []);
   const markGuide = useCallback((i) => setGuide((g) => (g.steps[i] ? g : { ...g, steps: { ...g.steps, [i]: true } })), []);
@@ -4624,94 +2974,56 @@ export default function App() {
 
   const actions = useMemo(() => {
     const upsert = (aid, sid, fn) => setDb((d) => {
-      const k = subKey(aid, sid); const cur = d.submissions[k];
-      const next = fn(cur);
-      if (!next || next === cur) return d;
-      return { ...d, submissions: { ...d.submissions, [k]: next } };
+      const k = subKey(aid, sid); const cur = d.submissions[k]; const next = fn(cur);
+      return !next || next === cur ? d : { ...d, submissions: { ...d.submissions, [k]: next } };
     });
     const blank = (aid, sid) => ({ id: uid('sub'), assignmentId: aid, studentId: sid, status: 'draft', answers: {}, annotations: {}, rubricScores: {}, comment: '', note: '', history: [] });
-    const draftOnly = (fn) => (cur) => { if (cur && cur.status !== 'draft') return cur; return fn(cur); };
     return {
-      saveDraft: (aid, sid, answers) => upsert(aid, sid, draftOnly((cur) => {
-        if (!cur && !Object.keys(answers || {}).some((k) => isAnswered({ type: 'short' }, answers[k]) || answers[k] != null)) return cur;
+      saveDraft: (aid, sid, answers) => upsert(aid, sid, (cur) => {
+        if (cur && cur.status !== 'draft') return cur;
+        if (!cur && !Object.values(answers || {}).some((v) => v != null && v !== '' && !(Array.isArray(v) && !v.length))) return cur;
         const base = cur || blank(aid, sid);
         return { ...base, answers: { ...base.answers, ...answers }, draftSavedAt: Date.now() };
-      })),
-      setPages: (aid, sid, bid, pages) => upsert(aid, sid, draftOnly((cur) => { const base = cur || blank(aid, sid); return { ...base, answers: { ...base.answers, [bid]: pages }, draftSavedAt: Date.now() }; })),
-      saveNote: (aid, sid, note) => upsert(aid, sid, draftOnly((cur) => { if (!cur && !note) return cur; const base = cur || blank(aid, sid); return { ...base, note, draftSavedAt: Date.now() }; })),
+      }),
       submit: (aid, sid, answers) => {
-        const a = dbRef.current.assignments[aid]; const at = Date.now();
-        const late = at > a.dueAt;
-        upsert(aid, sid, (cur) => {
-          const base = cur || blank(aid, sid);
-          const merged = { ...base.answers, ...answers };
-          return { ...base, answers: merged, status: 'submitted', submittedAt: at, late, resubmitting: false, draftSavedAt: at, autoScore: autoScore(a, merged).score };
-        });
+        const a = dbRef.current.assignments[aid]; const at = Date.now(); const late = at > a.dueAt;
+        upsert(aid, sid, (cur) => { const base = cur || blank(aid, sid); const merged = { ...base.answers, ...answers }; return { ...base, answers: merged, status: 'submitted', submittedAt: at, late, resubmitting: false, draftSavedAt: at, autoScore: autoScore(a, merged).score }; });
         if (sid === 's_omar' && guideRef.current.aid === aid) markGuide(2);
         return { late, daysLate: late ? lateDays(a.dueAt, at) : 0, at };
       },
-      startResubmit: (aid, sid) => upsert(aid, sid, (cur) => cur && ({
-        ...cur, status: 'draft', resubmitting: true, draftSavedAt: Date.now(),
-        history: [...(cur.history || []), { mark: cur.mark, comment: cur.comment, rubricScores: cur.rubricScores, annotations: cur.annotations, returnedAt: cur.returnedAt, answers: cur.answers }],
-        mark: undefined, comment: '', rubricScores: {}, annotations: {},
-      })),
+      startRedo: (aid, sid) => upsert(aid, sid, (cur) => cur && ({ ...cur, status: 'draft', resubmitting: true, draftSavedAt: Date.now(), history: [...(cur.history || []), { mark: cur.mark, comment: cur.comment, annotations: cur.annotations, returnedAt: cur.returnedAt }], mark: undefined, comment: '', annotations: {} })),
       dismissReminder: (rid) => setDb((d) => ({ ...d, reminders: d.reminders.map((r) => (r.id === rid ? { ...r, dismissed: true } : r)) })),
       publish: (draft) => {
-        const at = Date.now();
-        const a = draftToAssignment(draft, at, uid('a'));
-        setDb((d) => ({ ...d, assignments: { ...d.assignments, [a.id]: a } }));
-        setNow(at);
-        const clsTxt = clsList(a.classes, lang);
-        if (a.status === 'scheduled') toast(i18n.t('b.scheduled', { when: `${fmt.date(a.publishAt)} · ${fmt.time(a.publishAt)}` }), { kind: 'success' });
+        const at = Date.now(); const a = draftToAssignment(draft, at, i18n.t, uid('a'));
+        setDb((d) => ({ ...d, assignments: { ...d.assignments, [a.id]: a } })); setNow(at);
+        if (a.status === 'scheduled') toast(i18n.t('sh.scheduled', { when: `${fmt.date(a.publishAt)}, ${fmt.time(a.publishAt)}` }), { kind: 'success' });
         else {
-          if (a.classes.includes('8B')) setGuide((g) => ({ ...g, aid: a.id, steps: { 1: true } }));
-          toast(i18n.t('b.published', { cls: clsTxt }), { kind: 'success', action: a.classes.includes('8B') ? { label: i18n.t('b.viewAsStudent'), onClick: () => go('student', { name: 'home' }, 'middle') } : undefined });
+          if (a.classes.includes(STUDENT_OMAR.cls)) setGuide((g) => ({ ...g, aid: a.id, steps: { 1: true } }));
+          toast(i18n.t('sh.sent', { cls: clsList(a.classes, lang) }), { kind: 'success', action: a.classes.includes(STUDENT_OMAR.cls) ? { label: i18n.t('sh.seeAsStudent'), onClick: () => go('student', { name: 'home' }, 'middle') } : undefined });
         }
         return a;
       },
-      duplicate: (aid, classes, dueAt) => {
-        const src = dbRef.current.assignments[aid]; const at = Date.now();
-        const shift = dueAt - src.dueAt;
-        const a = { ...JSON.parse(JSON.stringify(src)), id: uid('a'), classes, dueAt, publishAt: at, status: 'published', createdAt: at, latePolicy: { ...src.latePolicy, until: src.latePolicy?.until ? src.latePolicy.until + shift : null } };
-        setDb((d) => ({ ...d, assignments: { ...d.assignments, [a.id]: a } }));
-        setNow(at);
-        toast(i18n.t('dup.done', { cls: clsList(classes, lang), date: `${fmt.date(dueAt)} · ${fmt.time(dueAt)}` }), { kind: 'success' });
-        return a;
-      },
-      saveGrade: (aid, sid, data, status) => {
+      sendBack: (aid, sid, data, status) => {
         const at = Date.now();
-        upsert(aid, sid, (cur) => cur && ({ ...cur, ...data, status, gradedAt: at, returnedAt: status === 'graded' ? cur.returnedAt : at }));
-        const name = studentFirst(STUDENTS[sid], lang);
-        toast(i18n.t(status === 'returned' ? 'g.returned' : status === 'revision' ? 'g.revised' : 'g.saved', { name }), { kind: 'success' });
-        if (status !== 'graded' && sid === 's_omar' && guideRef.current.aid === aid) markGuide(3);
-      },
-      returnAllGraded: (aid, cls) => {
-        const at = Date.now(); let n = 0;
-        setDb((d) => {
-          const subs = { ...d.submissions };
-          ROSTERS[cls].forEach((stu) => { const k = subKey(aid, stu.id); if (subs[k]?.status === 'graded') { subs[k] = { ...subs[k], status: 'returned', returnedAt: at }; n += 1; } });
-          return { ...d, submissions: subs };
-        });
-        setTimeout(() => toast(n ? i18n.t('sub.returnedAll', { n }) : i18n.t('sub.noneGraded'), { kind: n ? 'success' : 'info' }), 0);
+        upsert(aid, sid, (cur) => cur && ({ ...cur, ...data, status, gradedAt: at, returnedAt: at }));
+        toast(i18n.t(status === 'revision' ? 'mk.sentRedo' : 'mk.sentOk', { name: studentFirst(STUDENTS[sid], lang) }), { kind: 'success' });
+        if (sid === 's_omar' && guideRef.current.aid === aid) markGuide(3);
       },
       remind: (aid, cls, ids) => {
         const d0 = dbRef.current; const a = d0.assignments[aid]; const at = Date.now();
-        const targets = ids || ROSTERS[cls].filter((stu) => ['missing', 'notYet'].includes(teacherStatus(a, d0.submissions[subKey(aid, stu.id)], at))).map((s) => s.id);
-        if (!targets.length) { toast(i18n.t('sub.noneToRemind'), { kind: 'info' }); return; }
+        const targets = ids || (ROSTERS[cls] || []).filter((stu) => ['missing', 'notYet'].includes(teacherStatus(a, d0.submissions[subKey(aid, stu.id)], at))).map((s) => s.id);
+        if (!targets.length) { toast(i18n.t('rem.none'), { kind: 'info' }); return; }
         setDb((d) => ({ ...d, reminders: [...d.reminders.filter((r) => !(r.assignmentId === aid && targets.includes(r.studentId))), ...targets.map((sid) => ({ id: uid('rem'), studentId: sid, assignmentId: aid, teacherId: a.teacherId, at }))] }));
-        toast(i18n.t('sub.reminded', { n: targets.length }), { kind: 'success' });
+        toast(i18n.t('rem.done', { n: targets.length }), { kind: 'success' });
       },
       remindStudent: (sid) => {
         const d0 = dbRef.current; const stu = STUDENTS[sid]; const at = Date.now();
         const a = teacherAssignments(d0).filter((x) => x.classes.includes(stu.cls) && isPublished(x, at)).find((x) => ['missing', 'notYet'].includes(teacherStatus(x, d0.submissions[subKey(x.id, sid)], at)));
-        if (!a) { toast(i18n.t('sub.noneToRemind'), { kind: 'info' }); return; }
+        if (!a) { toast(i18n.t('rem.none'), { kind: 'info' }); return; }
         setDb((d) => ({ ...d, reminders: [...d.reminders, { id: uid('rem'), studentId: sid, assignmentId: a.id, teacherId: a.teacherId, at }] }));
-        toast(i18n.t('sub.reminded', { n: 1 }), { kind: 'success' });
+        toast(i18n.t('rem.done', { n: 1 }), { kind: 'success' });
       },
-      notifyHomeroom: (key, cls) => {
-        setDb((d) => ({ ...d, notified: { ...d.notified, [key]: true } }));
-        toast(i18n.t('ad.notifyToast', { cls: clsLabel(cls, lang, true) }), { kind: 'info' });
-      },
+      notifyHomeroom: (key, cls) => { setDb((d) => ({ ...d, notified: { ...d.notified, [key]: true } })); toast(i18n.t('ad.notifyToast', { cls: clsLabel(cls, lang, true) }), { kind: 'info' }); },
     };
   }, [i18n, lang, fmt, toast, go, markGuide]);
 
@@ -4723,36 +3035,27 @@ export default function App() {
   };
   const guideGo = (i) => {
     setGuide((x) => ({ ...x, open: false }));
-    const g = guideRef.current; const aid = g.aid && db.assignments[g.aid] ? g.aid : null;
+    const aid = guideRef.current.aid && db.assignments[guideRef.current.aid] ? guideRef.current.aid : null;
+    const omar = STUDENT_OMAR.cls;
     if (i === 1) go('teacher', { name: 'create' });
     if (i === 2) go('student', { name: 'home' }, 'middle');
-    if (i === 3) { const sub = aid && db.submissions[subKey(aid, 's_omar')]; go('teacher', sub && HANDED_IN.includes(teacherStatus(db.assignments[aid], sub, now)) ? { name: 'grade', id: aid, sid: 's_omar' } : aid ? { name: 'submissions', id: aid, cls: '8B' } : { name: 'grading' }); }
+    if (i === 3) { const sub = aid && db.submissions[subKey(aid, 's_omar')]; go('teacher', sub && HANDED_IN.includes(teacherStatus(db.assignments[aid], sub, now)) ? { name: 'mark', id: aid, sid: 's_omar' } : aid ? { name: 'class', id: aid, cls: omar } : { name: 'home' }); }
     if (i === 4) go('student', aid ? { name: 'assignment', id: aid } : { name: 'home' }, 'middle');
-    if (i === 5) go('teacher', { name: 'insights', cls: '8B' });
+    if (i === 5) go('teacher', { name: 'progress', cls: omar });
     if (i === 6) go('admin', { name: 'home' });
   };
 
-  const ctx = {
-    lang, setLang, t, fmt, dir, role, setRole, stage, setStage, student, now, db, actions, route, navigate, toast,
-    settings, setSettings, guide, setGuide, guideGo, markGuide, builder, setBuilder,
-  };
+  const ctx = { lang, setLang, t, fmt, dir, role, setRole, stage, setStage, student, now, db, actions, route, navigate, toast, settings, setSettings, guide, setGuide, guideGo, markGuide, builder, setBuilder };
 
-  const renderView = () => {
+  const view = () => {
     const r = route;
-    if (role === 'student') {
-      if (r.name === 'assignment') return <AssignmentPage key={r.id} id={r.id} />;
-      if (r.name === 'paper') return <PaperUpload key={`${r.id}${r.blockId}`} id={r.id} blockId={r.blockId} />;
-      if (r.name === 'all') return <AllAssignments />;
-      return <StudentDashboard />;
-    }
+    if (role === 'student') return r.name === 'assignment' ? <AssignmentPage key={r.id} id={r.id} /> : <StudentHome />;
     if (role === 'teacher') {
-      if (r.name === 'assignments') return <TeacherAssignments />;
-      if (r.name === 'create') return <AssignmentBuilder />;
-      if (r.name === 'grading') return <GradingQueue />;
-      if (r.name === 'submissions') return <SubmissionsTable key={`${r.id}${r.cls}${r.filter}`} id={r.id} cls={r.cls} filter={r.filter} />;
-      if (r.name === 'grade') return <GradingView key={`${r.id}${r.sid}`} id={r.id} sid={r.sid} />;
-      if (r.name === 'insights') return <ClassInsights key={r.cls || 'x'} cls={r.cls} />;
-      return <TeacherDashboard />;
+      if (r.name === 'create') return <SetHomework />;
+      if (r.name === 'class') return <ClassView key={`${r.id}${r.cls}`} id={r.id} cls={r.cls} />;
+      if (r.name === 'mark') return <MarkView key={`${r.id}${r.sid}`} id={r.id} sid={r.sid} />;
+      if (r.name === 'progress') return <Progress key={r.cls || 'x'} cls={r.cls} />;
+      return <TeacherHome />;
     }
     return <AdminOverview />;
   };
@@ -4762,27 +3065,20 @@ export default function App() {
       <style>{GLOBAL_CSS}</style>
       <div className={cx('ags-root', settings.reduceMotion && 'reduce-motion')} dir={dir} lang={lang}>
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-[100] btn btn-gold">{t('skip')}</a>
-        <TopBar onOpenSettings={() => setModal('settings')} onReset={() => setModal('reset')} />
-        {role === 'student' && <AgePreviewBar />}
-        <div className="flex">
-          <Sidebar />
-          <main id="main" tabIndex={-1} className={cx('flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-6', guide.open ? 'pb-40 lg:pb-72' : 'pb-36 lg:pb-12')}>
-            <div className="max-w-6xl mx-auto">
-              {loading ? <ViewSkeleton /> : <div key={viewKey} className="ags-fade-up">{renderView()}</div>}
-              <Footer onAbout={() => setModal('about')} />
-            </div>
-          </main>
-        </div>
-        <BottomNav />
+        <TopBar onSettings={() => setModal('settings')} />
+        {role === 'student' && <AgeBar />}
+        <main id="main" tabIndex={-1} className="px-4 sm:px-6 py-6 sm:py-8 pb-28">
+          {loading ? <div className="max-w-3xl mx-auto"><ViewSkeleton /></div> : <div key={viewKey} className="ags-fade-up">{view()}</div>}
+          <div className="max-w-5xl mx-auto"><Footer onAbout={() => setModal('about')} /></div>
+        </main>
         <DemoGuide />
-        <Toasts toasts={toasts} dismiss={dismissToast} />
+        <Toasts toasts={toasts} dismiss={(id) => setToasts((ts) => ts.filter((x) => x.id !== id))} />
         <SettingsModal open={modal === 'settings'} onClose={() => setModal(null)} onReset={() => setModal('reset')} onAbout={() => setModal('about')} />
         <Modal open={modal === 'reset'} onClose={() => setModal(null)} title={t('demo.reset.title')} icon={RotateCcw} size="sm"
           footer={<><button type="button" className="btn btn-secondary" onClick={() => setModal(null)}>{t('cancel')}</button><button type="button" className="btn btn-primary" onClick={resetDemo}><RotateCcw aria-hidden="true" className="w-4 h-4" />{t('demo.reset')}</button></>}>
           <p className="text-ags-navy">{t('demo.reset.body')}</p>
         </Modal>
-        <Modal open={modal === 'about'} onClose={() => setModal(null)} title={t('demo.about')} icon={Info} size="sm"
-          footer={<button type="button" className="btn btn-primary" onClick={() => setModal(null)}>{t('close')}</button>}>
+        <Modal open={modal === 'about'} onClose={() => setModal(null)} title={t('demo.about')} icon={Info} size="sm" footer={<button type="button" className="btn btn-primary" onClick={() => setModal(null)}>{t('close')}</button>}>
           <p className="text-ags-navy leading-relaxed">{t('demo.about.body')}</p>
           <p className="mt-4 text-sm text-ags-slate">{t('app.school')} · {t('app.city')}</p>
         </Modal>
